@@ -227,12 +227,12 @@ fetch(parkomatyXlsxUrl)
 
       results.data.forEach(row => {
         const id = String(row['Numer przestawionego parkomatu np. Z180512 albo O050123'] || '').toUpperCase().trim();
-        const link1 = row['Zdjęcie parkomatu z numerem w nowej lokalizacji'];
+        const link1 = row['Zdjecie parkomatu z numerem w nowej lokalizacji'];
 
         if (id) {
           zdemontowaneId.push(id);
 
-          if (link1 && link1.includes("open?id=")) {
+          if ( typeof link1 === 'string'&& link1.includes("id=")) {
             const imgId = link1.split("id=")[1];
             zdemontowaneFoto[id] = `https://drive.google.com/thumbnail?id=${imgId}&sz=w500`;
           }
