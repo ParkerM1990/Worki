@@ -163,9 +163,9 @@ margin-top: 30px;}
 </div>
 
 <div class="legend">
-  <div><span style="background: green;"></span> Aktywny parkomat</div>
-  <div><span style="background: red;"></span> Zdemontowany parkomat</div>
-  <div><span style="background: black;"></span> Zdemontowane Fundamenty</div>
+  <div><span style="background: green;"></span> Do przestawienia</div>
+  <div><span style="background: red;"></span> Przestawiony</div>
+  <div><span style="background: black;"></span> Zdemontowany adapter</div>
 </div>
 
 <button id="refreshBtn">Odśwież</button>
@@ -181,8 +181,8 @@ margin-top: 30px;}
     }).addTo(mapa);
     watchLocation();
 
-    const fundamentyUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRBVT8MoLx1Zaft1gTfqkWwdoSqDBKiUk8IFI7-D4NxriMKWsPSJdfayhncS21HaNj7Eg7Y0pGrr0oE/pub?output=xlsx';
-    const linkDoCsv = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRtVA5KWhFAp6bRgBFQH-oDmJgGlbzj3F91-vw1wvTKMCwpO-DjRZ3JoopFm2UarhmInDFPcUzPhz1D/pub?gid=1398714071&single=true&output=csv';
+    const fundamentyUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRu6iqCz60HP-t5OiGT0S70iEm8TaUD5VzKrzQGZRm-88X2PBdN23o1QV4Xj-TuagYWWNK6aXhBr1Lc/pub?output=xlsx';
+    const linkDoCsv = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRa44w3eS3dS4vNKgVlclx9q-QV0bzA-69z5B2ieyGwi2GF9uwRervPNwPjT87vEqIvSgQdVw36zuxY/pub?gid=290974758&single=true&output=csv';
     const parkomatyXlsxUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTXmRbgEnvNhKRWYUZMLwGZjZVw3zXQrixEwWWhp1l5SjeTRnJS6G2w5IjdFXQbBw/pub?output=xlsx';
     
     let fundamentyId = [];
@@ -226,8 +226,8 @@ fetch(parkomatyXlsxUrl)
       zdemontowaneFoto = {};
 
       results.data.forEach(row => {
-        const id = String(row['Numer zdemontowanego parkomatu np. Z180512 albo O050123'] || '').toUpperCase().trim();
-        const link1 = row['Zdjęcie parkomatu z numerem'];
+        const id = String(row['Numer przestawionego parkomatu np. Z180512 albo O050123'] || '').toUpperCase().trim();
+        const link1 = row['Zdjęcie parkomatu z numerem w nowej lokalizacji'];
 
         if (id) {
           zdemontowaneId.push(id);
@@ -256,8 +256,8 @@ fetch(parkomatyXlsxUrl)
       fundamentyId = [];
       fundamentyFoto = {};
       data.forEach(row => {
-  const id = String(row['Numer zdemontowanego parkomatu np. Z180512 albo O050123'] || '').toUpperCase().trim();
-  const link2 = row['Zdjęcie parkomatu z numerem'];
+  const id = String(row['Numer  parkomatu np. Z180512 albo O050123 gdzie usunięto adapter'] || '').toUpperCase().trim();
+  const link2 = row['Zdjęcie miejsca z zasypanym otworem'];
 
         if (id) {
           fundamentyId.push(id);
