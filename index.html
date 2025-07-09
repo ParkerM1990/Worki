@@ -235,6 +235,8 @@ fetch(parkomatyXlsxUrl)
           if ( typeof link1 === 'string'&& link1.includes("id=")) {
             const imgId = link1.split("id=")[1];
             zdemontowaneFoto[id] = `https://drive.google.com/thumbnail?id=${imgId}&sz=w500`;
+            // log 
+            console.log("📷 Foto zdemontowany:", id, "->", zdemontowaneFoto[id]);
           }
         }
       });
