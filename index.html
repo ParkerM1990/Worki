@@ -156,7 +156,7 @@ margin-top: 30px;}
     <button id="sidebarClose">×</button>
   </div>
   <div class="sidebar-search">
-    <input type="text" id="sidebarSearch" placeholder="Szukaj po numerze..." />
+    <input type="text" id="sidebarSearch" placeholder="Szukaj po numerze i adresie..." />
   </div>
   
   <div id="sidebarContent"></div>
@@ -344,8 +344,12 @@ function createSidebar(parkomaty, filter = "") {
 
   const grouped = {};
   parkomaty.forEach(p => {
-    const match = (p.kod + p.numer).toUpperCase().includes(filter);
-    if (!match && filter) return;
+    const match = (
+  (p.kod && p.kod.toUpperCase().includes(filter)) ||
+  (p.numer && p.numer.toUpperCase().includes(filter)) ||
+  (p.adres && p.adres.toUpperCase().includes(filter))
+);
+if (!match && filter) return;
 
     if (!grouped[p.strefa]) grouped[p.strefa] = [];
     grouped[p.strefa].push(p);
