@@ -226,16 +226,15 @@ fetch(parkomatyXlsxUrl)
       zdemontowaneFoto = {};
 
       results.data.forEach(row => {
-        const id = String(row['Numerff parkomatu gdzie były worki  np. A010123 albo 1050123'] || '').toUpperCase().trim();
+        const id = String(row['Numer parkomatu gdzie były worki  np. A010123 albo 1050123'] || '').toUpperCase().trim();
         const link1 = row['Zdjęcie posprzątanego terenu'];
 
         if (id) {
           zdemontowaneId.push(id);
 
-          if ( typeof link1 === 'string'&& link1.includes("id=")) {
+          if (typeof link1 === 'string' && link1.includes("id=")) {
             const imgId = link1.split("id=")[1];
-            zdemontowaneFoto[id] = `https://drive.google.com/thumbnail?id=${imgId}&sz=w500`;
-            // log 
+            zdemontowaneFoto[id] = `https://drive.google.com/uc?export=view&id=${imgId}`;
             console.log("📷 Foto zdemontowany:", id, "->", zdemontowaneFoto[id]);
           }
         }
@@ -247,7 +246,6 @@ fetch(parkomatyXlsxUrl)
   });
 }
 
-
     function loadFundamenty() {
   fetch(fundamentyUrl)
     .then(res => res.arrayBuffer())
@@ -257,23 +255,24 @@ fetch(parkomatyXlsxUrl)
       const data = XLSX.utils.sheet_to_json(sheet);
       fundamentyId = [];
       fundamentyFoto = {};
+
       data.forEach(row => {
-  const id = String(row['Numer parkomatu gdzie były worki  np. A010123 albo 1050123'] || '').toUpperCase().trim();
-  const link2 = row['Zdjęcie posprzątanego terenu'];
+        const id = String(row['Numer parkomatu gdzie były worki  np. A010123 albo 1050123'] || '').toUpperCase().trim();
+        const link2 = row['Zdjęcie posprzątanego terenu'];
 
         if (id) {
           fundamentyId.push(id);
 
-          if (link2 && link2.includes("open?id=")) {
+          if (link2 && link2.includes("id=")) {
             const imgId2 = link2.split("id=")[1];
-            fundamentyFoto[id] = `https://drive.google.com/thumbnail?id=${imgId2}&sz=w500`;
+            fundamentyFoto[id] = `https://drive.google.com/uc?export=view&id=${imgId2}`;
           }
         }
       });
+
       updateMarkers();
     });
 }
-
 
 
     function updateStrefy(parkomaty) {
@@ -312,10 +311,13 @@ fetch(parkomatyXlsxUrl)
     if (isFundament) kolor = 'black';
     else if (isZdemontowany) kolor = 'red';
 
-    // Zdjęcia (jeśli dostępne)
-    const fotoZdemontowany = zdemontowaneFoto[id] ? `<br><b>Demontaż:</b><br><a href="${zdemontowaneFoto[id]}" target="_blank">📷 Zobacz zdjęcie</a>`
+    // W updateMarkers() dla popupów
+const fotoZdemontowany = zdemontowaneFoto[id]
+  ? `<br><b>Demontaż:</b><br><a href="${zdemontowaneFoto[id]}" target="_blank">📷 Zobacz zdjęcie</a>`
   : '';
-    const fotoFundament = fundamentyFoto[id] ? `<br><b>Fundament:</b><br><img src="${fundamentyFoto[id]}" style="max-width: 200px;" referrerpolicy="no-referrer" crossorigin="anonymous" onerror="this.style.display='none';">` : '';
+const fotoFundament = fundamentyFoto[id]
+  ? `<br><b>Fundament:</b><br><img src="${fundamentyFoto[id]}" style="max-width:200px;" referrerpolicy="no-referrer" onerror="this.style.display='none';">`
+  : '';
     const popup = `
       <b>Parkomat:</b> ${p.kod} / ${p.numer}<br/>
       <b>Adres:</b> ${p.adres}<br/>
