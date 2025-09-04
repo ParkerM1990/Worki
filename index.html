@@ -233,10 +233,9 @@ fetch(parkomatyXlsxUrl)
           zdemontowaneId.push(id);
 
           if (typeof link1 === 'string' && link1.includes("id=")) {
-            const imgId = link1.split("id=")[1];
-            zdemontowaneFoto[id] = `https://drive.google.com/uc?export=view&id=${imgId}`;
-            console.log("📷 Foto zdemontowany:", id, "->", zdemontowaneFoto[id]);
-          }
+    const imgId = link1.split("id=")[1];
+    zdemontowaneFoto[id] = `https://drive.google.com/thumbnail?id=${imgId}&sz=w500`;
+}
         }
       });
 
@@ -264,9 +263,9 @@ fetch(parkomatyXlsxUrl)
           fundamentyId.push(id);
 
           if (link2 && link2.includes("id=")) {
-            const imgId2 = link2.split("id=")[1];
-            fundamentyFoto[id] = `https://drive.google.com/uc?export=view&id=${imgId2}`;
-          }
+    const imgId2 = link2.split("id=")[1];
+    fundamentyFoto[id] = `https://drive.google.com/thumbnail?id=${imgId2}&sz=w500`;
+}
         }
       });
 
