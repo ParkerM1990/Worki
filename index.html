@@ -189,7 +189,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(mapa);
 
 // Opcjonalnie dodanie markera w tym punkcie
-const locationMarker = L.marker([lat, lon]).addTo(mapa)
+const startMarker = L.marker([lat, lon]).addTo(mapa)
   .bindPopup('Twoja lokalizacja')
   .openPopup();
 
