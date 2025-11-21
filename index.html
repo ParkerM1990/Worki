@@ -412,12 +412,19 @@ if (!match && filter) return;
 
   navigator.geolocation.watchPosition((pos) => {
     const { latitude, longitude } = pos.coords;
+
+    // jeśli marker istnieje, usuń poprzedni
     if (locationMarker) mapa.removeLayer(locationMarker);
+
+    // dodaj marker dla aktualnej lokalizacji
     locationMarker = L.circleMarker([latitude, longitude], {
       radius: 10,
       color: "blue",
       fillOpacity: 0.8
     }).addTo(mapa).bindPopup("Twoja lokalizacja");
+
+    // **ustaw widok mapy na aktualną pozycję**
+    mapa.setView([latitude, longitude], 16);
   });
 }
 document.getElementById("sidebarToggle").addEventListener("click", () => {
