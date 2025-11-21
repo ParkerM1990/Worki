@@ -407,26 +407,24 @@ if (!match && filter) return;
     container.appendChild(group);
   }
 }
-    function watchLocation() {
-  if (!navigator.geolocation) return;
+    // Pobranie parametrów z URL
+const urlParams = new URLSearchParams(window.location.search);
+const lat = parseFloat(urlParams.get('lat')) || 52.2297; // domyślna szerokość
+const lon = parseFloat(urlParams.get('lon')) || 21.0122; // domyślna długość
+const zoom = parseInt(urlParams.get('zoom')) || 16;      // domyślny zoom
 
-  navigator.geolocation.watchPosition((pos) => {
-    const { latitude, longitude } = pos.coords;
+// Inicjalizacja mapy z tymi współrzędnymi
+const mapa = L.map('map').setView([lat, lon], zoom);
 
-    // jeśli marker istnieje, usuń poprzedni
-    if (locationMarker) mapa.removeLayer(locationMarker);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(mapa);
 
-    // dodaj marker dla aktualnej lokalizacji
-    locationMarker = L.circleMarker([latitude, longitude], {
-      radius: 10,
-      color: "blue",
-      fillOpacity: 0.8
-    }).addTo(mapa).bindPopup("Twoja lokalizacja");
-
-    // **ustaw widok mapy na aktualną pozycję**
-    mapa.setView([latitude, longitude], 16);
-  });
-}
+// Opcjonalnie dodanie markera w tym punkcie
+const locationMarker = L.marker([lat, lon]).addTo(mapa)
+  .bindPopup('Twoja lokalizacja')
+  .openPopup();
+    
 document.getElementById("sidebarToggle").addEventListener("click", () => {
   document.getElementById("sidebar").classList.toggle("open");
   document.getElementById("sidebarClose").addEventListener("click", () => {
