@@ -175,7 +175,23 @@ margin-top: 30px;}
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
-  
+  // Pobranie parametrów z URL
+const urlParams = new URLSearchParams(window.location.search);
+const lat = parseFloat(urlParams.get('lat')) || 52.2297; // domyślna szerokość
+const lon = parseFloat(urlParams.get('lon')) || 21.0122; // domyślna długość
+const zoom = parseInt(urlParams.get('zoom')) || 16;      // domyślny zoom
+
+// Inicjalizacja mapy z tymi współrzędnymi
+const mapa = L.map('map').setView([lat, lon], zoom);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(mapa);
+
+// Opcjonalnie dodanie markera w tym punkcie
+const locationMarker = L.marker([lat, lon]).addTo(mapa)
+  .bindPopup('Twoja lokalizacja')
+  .openPopup();
 
     const fundamentyUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSKwKgfoMwIQI5oBcl50amOFPTO7gvRwBRdmfWP110fBI6YnA-Oy4L7BIagYk_HY5ozwQxGqq9jpZ_x/pub?output=xlsx';
     const linkDoCsv = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSKwKgfoMwIQI5oBcl50amOFPTO7gvRwBRdmfWP110fBI6YnA-Oy4L7BIagYk_HY5ozwQxGqq9jpZ_x/pub?output=xlsx';
@@ -403,23 +419,7 @@ if (!match && filter) return;
     container.appendChild(group);
   }
 }
-    // Pobranie parametrów z URL
-const urlParams = new URLSearchParams(window.location.search);
-const lat = parseFloat(urlParams.get('lat')) || 52.2297; // domyślna szerokość
-const lon = parseFloat(urlParams.get('lon')) || 21.0122; // domyślna długość
-const zoom = parseInt(urlParams.get('zoom')) || 16;      // domyślny zoom
-
-// Inicjalizacja mapy z tymi współrzędnymi
-const mapa = L.map('map').setView([lat, lon], zoom);
-
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap contributors'
-}).addTo(mapa);
-
-// Opcjonalnie dodanie markera w tym punkcie
-const locationMarker = L.marker([lat, lon]).addTo(mapa)
-  .bindPopup('Twoja lokalizacja')
-  .openPopup();
+    
     
 document.getElementById("sidebarToggle").addEventListener("click", () => {
   document.getElementById("sidebar").classList.toggle("open");
