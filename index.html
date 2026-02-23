@@ -1,217 +1,204 @@
 <!DOCTYPE html>
-<html>
+<html lang="pl">
 <head>
-<meta charset="utf-8"/>
-<title>Monitoring Awarii Parkomatów</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Monitoring Parkomatów</title>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <style>
-body { margin:0; font-family: Arial; }
-#map { height: 100vh; width: 70%; float:left; }
-#sidebar {
-  width:30%;
-  height:100vh;
-  float:right;
-  overflow:auto;
-  padding:10px;
-  box-shadow:-3px 0 6px rgba(0,0,0,0.2);
-  background:#f8f8f8;
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f4f6f9;
 }
-.counter {
-  position:absolute;
-  top:10px;
-  right:32%;
-  background:white;
-  padding:10px 15px;
-  border-radius:8px;
-  box-shadow:0 0 10px rgba(0,0,0,0.3);
-  font-weight:bold;
-  z-index:1000;
+
+header {
+    background: #1e293b;
+    color: white;
+    padding: 15px;
+    text-align: center;
+    font-weight: bold;
+    position: relative;
 }
-.section { margin-bottom:25px; }
-input { margin:3px 0; width:100%; padding:4px; }
-.awaria-item {
-  background:white;
-  padding:6px;
-  margin:4px 0;
-  border-left:4px solid orange;
+
+#alarmCounter {
+    position: absolute;
+    right: 15px;
+    top: 15px;
+    background: red;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 14px;
 }
-.historia-item {
-  background:white;
-  padding:6px;
-  margin:4px 0;
-  border-left:4px solid gray;
+
+#map {
+    height: calc(100vh - 120px);
+}
+
+.tab-content {
+    display: none;
+    padding: 10px;
+    overflow-y: auto;
+    height: calc(100vh - 120px);
+}
+
+.active {
+    display: block;
+}
+
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    display: flex;
+    background: white;
+    border-top: 1px solid #ccc;
+}
+
+.bottom-nav button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: white;
+    font-size: 14px;
+}
+
+.bottom-nav button.active-tab {
+    background: #e2e8f0;
+    font-weight: bold;
+}
+
+.alarm-card {
+    background: white;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
 }
 </style>
 </head>
+
 <body>
 
-<div id="map"></div>
-<div class="counter" id="counter">Aktywne awarie: 0</div>
+<header>
+Monitoring Parkomatów
+<div id="alarmCounter">0</div>
+</header>
 
-<div id="sidebar">
+<div id="map" class="tab-content active"></div>
+<div id="activeList" class="tab-content"></div>
+<div id="historyList" class="tab-content"></div>
 
-<h2>🔧 Aktywne awarie</h2>
-<div id="aktywnelist"></div>
-
-<hr/>
-
-<h2>📜 Historia (usunięte)</h2>
-
-<label>Filtr numer parkomatu</label>
-<input type="text" id="filterTerminal" placeholder="np. 13070706">
-
-<label>Od daty</label>
-<input type="date" id="filterFrom">
-
-<label>Do daty</label>
-<input type="date" id="filterTo">
-
-<button onclick="filterHistoria()">Filtruj</button>
-
-<div id="historialist"></div>
-
+<div class="bottom-nav">
+<button onclick="switchTab('map')" class="active-tab">Mapa</button>
+<button onclick="switchTab('activeList')">Aktywne</button>
+<button onclick="switchTab('historyList')">Historia</button>
 </div>
 
 <script>
 
-const parkomatyUrl = "parkomaty.csv";
-const aktywneUrl = "awarie_aktywne.csv";
-const historiaUrl = "awarie_historia.csv";
+// 🔹 TU wklej link do Google Sheets jako CSV
+const ACTIVE_URL = "TU_WKLEJ_LINK_AKTYWNE";
+const HISTORY_URL = "TU_WKLEJ_LINK_HISTORIA";
 
-let map = L.map('map').setView([52.23, 21.01], 13);
+let map = L.map('map').setView([52.23, 21.01], 12);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap'
+    attribution: '&copy; OpenStreetMap'
 }).addTo(map);
 
-let markers = {};
-let parkomaty = [];
-let aktywne = [];
-let historia = [];
+let markers = [];
 
-function loadCSV(url) {
-  return fetch(url)
-    .then(r => r.text())
-    .then(text => {
-      const rows = text.split("\n").map(r => r.split(","));
-      const headers = rows[0];
-      return rows.slice(1).map(r => {
-        let obj = {};
-        headers.forEach((h,i)=>obj[h.trim()]=r[i]);
-        return obj;
-      });
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+
+    document.querySelectorAll('.bottom-nav button').forEach(btn => btn.classList.remove('active-tab'));
+    event.target.classList.add('active-tab');
+}
+
+async function loadActive() {
+    const response = await fetch(ACTIVE_URL);
+    const data = await response.text();
+    const rows = data.split("\n").slice(1);
+
+    document.getElementById("alarmCounter").innerText = rows.length - 1;
+
+    markers.forEach(m => map.removeLayer(m));
+    markers = [];
+
+    let grouped = {};
+
+    rows.forEach(row => {
+        let cols = row.split(",");
+        if(cols.length < 6) return;
+
+        let id = cols[0];
+        let lat = parseFloat(cols[1]);
+        let lng = parseFloat(cols[2]);
+        let code = cols[3];
+        let name = cols[4];
+
+        if(!grouped[id]) grouped[id] = [];
+        grouped[id].push(code + " - " + name);
+
+        let marker = L.marker([lat,lng]).addTo(map);
+        marker.bindPopup(
+            "<b>Parkomat:</b> "+id+
+            "<br><b>Aktywnych:</b> "+grouped[id].length+
+            "<br>"+grouped[id].join("<br>")
+        );
+
+        markers.push(marker);
     });
+
+    let activeHTML = "";
+    Object.keys(grouped).forEach(id => {
+        activeHTML += `<div class="alarm-card">
+            <b>Parkomat ${id}</b><br>
+            Ilość awarii: ${grouped[id].length}<br>
+            ${grouped[id].join("<br>")}
+        </div>`;
+    });
+
+    document.getElementById("activeList").innerHTML = activeHTML;
 }
 
-Promise.all([
-  loadCSV(parkomatyUrl),
-  loadCSV(aktywneUrl),
-  loadCSV(historiaUrl)
-]).then(data => {
-  parkomaty = data[0];
-  aktywne = data[1];
-  historia = data[2];
+async function loadHistory() {
+    const response = await fetch(HISTORY_URL);
+    const data = await response.text();
+    const rows = data.split("\n").slice(1);
 
-  renderMap();
-  renderActiveList();
-  renderHistoriaList();
-  updateCounter();
-});
+    let html = `<input type="text" id="filterInput" placeholder="Filtruj po numerze...">`;
 
-function renderMap() {
+    rows.forEach(row => {
+        let cols = row.split(",");
+        if(cols.length < 4) return;
 
-  parkomaty.forEach(p => {
+        html += `<div class="alarm-card">
+            <b>Parkomat ${cols[0]}</b><br>
+            ${cols[3]}<br>
+            ${cols[5]}
+        </div>`;
+    });
 
-    const terminal = p.TerminalID;
-    const awarie = aktywne.filter(a => a.TerminalID === terminal);
-
-    const color = awarie.length > 0 ? "orange" : "green";
-
-    const marker = L.circleMarker(
-      [parseFloat(p.Lat), parseFloat(p.Lng)],
-      { radius:8, color:color }
-    ).addTo(map);
-
-    let popup = `
-      <b>Terminal:</b> ${terminal}<br/>
-      <b>Adres:</b> ${p.Adres}<br/>
-      <b>Ilość aktywnych awarii:</b> ${awarie.length}
-    `;
-
-    if (awarie.length > 0) {
-      popup += "<br/><b>Lista:</b><ul>";
-      awarie.forEach(a=>{
-        popup += `<li>${a.EventCodeName} (${a.ExternalEventCodeID})</li>`;
-      });
-      popup += "</ul>";
-    }
-
-    marker.bindPopup(popup);
-    markers[terminal] = marker;
-  });
-
+    document.getElementById("historyList").innerHTML = html;
 }
 
-function updateCounter() {
-  document.getElementById("counter").innerText =
-    "Aktywne awarie: " + aktywne.length;
-}
-
-function renderActiveList() {
-  const div = document.getElementById("aktywnelist");
-  div.innerHTML = "";
-
-  aktywne.forEach(a=>{
-    div.innerHTML += `
-      <div class="awaria-item">
-        <b>${a.TerminalID}</b><br/>
-        ${a.EventCodeName}<br/>
-        ${a.EventDateUtc}
-      </div>
-    `;
-  });
-}
-
-function renderHistoriaList(filtered = historia) {
-  const div = document.getElementById("historialist");
-  div.innerHTML = "";
-
-  filtered.forEach(h=>{
-    div.innerHTML += `
-      <div class="historia-item">
-        <b>${h.TerminalID}</b><br/>
-        ${h.EventCodeName}<br/>
-        ${h.EventDateUtc}
-      </div>
-    `;
-  });
-}
-
-function filterHistoria() {
-
-  const terminal = document.getElementById("filterTerminal").value;
-  const from = document.getElementById("filterFrom").value;
-  const to = document.getElementById("filterTo").value;
-
-  let filtered = historia.filter(h=>{
-
-    let ok = true;
-
-    if (terminal && h.TerminalID !== terminal) ok = false;
-
-    if (from && new Date(h.EventDateUtc) < new Date(from)) ok = false;
-
-    if (to && new Date(h.EventDateUtc) > new Date(to)) ok = false;
-
-    return ok;
-  });
-
-  renderHistoriaList(filtered);
-}
+loadActive();
+loadHistory();
 
 </script>
+
 </body>
 </html>
