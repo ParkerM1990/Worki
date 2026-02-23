@@ -2,89 +2,23 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
 <title>Monitoring Parkomatów</title>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <style>
-body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #f4f6f9;
-}
-
-header {
-    background: #1e293b;
-    color: white;
-    padding: 15px;
-    text-align: center;
-    font-weight: bold;
-    position: relative;
-}
-
-#alarmCounter {
-    position: absolute;
-    right: 15px;
-    top: 15px;
-    background: red;
-    color: white;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 14px;
-}
-
-#map {
-    height: calc(100vh - 120px);
-}
-
-.tab-content {
-    display: none;
-    padding: 10px;
-    overflow-y: auto;
-    height: calc(100vh - 120px);
-}
-
-.active {
-    display: block;
-}
-
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    display: flex;
-    background: white;
-    border-top: 1px solid #ccc;
-}
-
-.bottom-nav button {
-    flex: 1;
-    padding: 12px;
-    border: none;
-    background: white;
-    font-size: 14px;
-}
-
-.bottom-nav button.active-tab {
-    background: #e2e8f0;
-    font-weight: bold;
-}
-
-.alarm-card {
-    background: white;
-    padding: 10px;
-    margin-bottom: 8px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-input {
-    width: 100%;
-    padding: 8px;
-    margin-bottom: 10px;
-}
+body { margin:0; font-family:Arial; background:#f4f6f9;}
+header { background:#1e293b; color:white; padding:15px; text-align:center; position:relative;}
+#alarmCounter { position:absolute; right:15px; top:15px; background:red; color:white; padding:5px 10px; border-radius:20px;}
+#map { height:calc(100vh - 120px);}
+.tab-content { display:none; height:calc(100vh - 120px); overflow:auto; padding:10px;}
+.active { display:block;}
+.bottom-nav { position:fixed; bottom:0; width:100%; display:flex; background:white; border-top:1px solid #ccc;}
+.bottom-nav button { flex:1; padding:12px; border:none; background:white;}
+.bottom-nav button.active-tab { background:#e2e8f0; font-weight:bold;}
+.alarm-card { background:white; padding:10px; margin-bottom:8px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05);}
 </style>
 </head>
 
@@ -107,96 +41,118 @@ Monitoring Parkomatów
 
 <script>
 
-// 🔹 TU wklej link do Google Sheets jako CSV
-const ACTIVE_URL = "TU_WKLEJ_LINK_AKTYWNE";
-const HISTORY_URL = "TU_WKLEJ_LINK_HISTORIA";
+// 🔴 TU WKLEJ LINKI CSV
+const PARKOMATY_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vReREVijVR33ZVud78Iv_oHBEkmDRkQxRxL97KN8gIbs9u5YPtVtvYsaQmHxrf7JWz_pQ_KdCaixonO/pub?output=csv";
+const ACTIVE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTj9Z5qWrmqdo88LUJtOcJsUkaNZEhxfsXTucOKWI2hbwtUKdGwdvQn4JsR7Wj27TJwxW7H0jnODbfR/pub?output=csv";
+const HISTORY_URL = "TU_LINK_HISTORIA";
 
-let map = L.map('map').setView([52.23, 21.01], 12);
+let map = L.map('map').setView([52.23,21.01],12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap'
-}).addTo(map);
+let allParkomaty = {};
+let activeEvents = {};
 
-let markers = [];
-
-function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+function switchTab(tabId){
+    document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
-
-    document.querySelectorAll('.bottom-nav button').forEach(btn => btn.classList.remove('active-tab'));
+    document.querySelectorAll('.bottom-nav button').forEach(btn=>btn.classList.remove('active-tab'));
     event.target.classList.add('active-tab');
 }
 
-async function loadActive() {
-    const response = await fetch(ACTIVE_URL);
-    const data = await response.text();
-    const rows = data.split("\n").slice(1);
+async function loadParkomaty(){
+    const res = await fetch(PARKOMATY_URL);
+    const text = await res.text();
+    const rows = text.split("\n").slice(1);
 
-    document.getElementById("alarmCounter").innerText = rows.length - 1;
+    rows.forEach(row=>{
+        let c = row.split(",");
+        if(c.length<4) return;
+        allParkomaty[c[0]] = {
+            lat: parseFloat(c[1]),
+            lng: parseFloat(c[2]),
+            location: c[3]
+        };
+    });
+}
 
-    markers.forEach(m => map.removeLayer(m));
-    markers = [];
+async function loadActive(){
+    const res = await fetch(ACTIVE_URL);
+    const text = await res.text();
+    const rows = text.split("\n").slice(1);
 
-    let grouped = {};
+    activeEvents = {};
+    rows.forEach(row=>{
+        let c=row.split(",");
+        if(c.length<3) return;
+        if(!activeEvents[c[0]]) activeEvents[c[0]]=[];
+        activeEvents[c[0]].push(c[2]);
+    });
 
-    rows.forEach(row => {
-        let cols = row.split(",");
-        if(cols.length < 6) return;
+    document.getElementById("alarmCounter").innerText = rows.length-1;
 
-        let id = cols[0];
-        let lat = parseFloat(cols[1]);
-        let lng = parseFloat(cols[2]);
-        let code = cols[3];
-        let name = cols[4];
+    renderMap();
+    renderActiveList();
+}
 
-        if(!grouped[id]) grouped[id] = [];
-        grouped[id].push(code + " - " + name);
+function renderMap(){
+    map.eachLayer(layer=>{
+        if(layer instanceof L.Marker) map.removeLayer(layer);
+    });
 
-        let marker = L.marker([lat,lng]).addTo(map);
+    Object.keys(activeEvents).forEach(id=>{
+        if(!allParkomaty[id]) return;
+
+        let p = allParkomaty[id];
+        let marker = L.marker([p.lat,p.lng]).addTo(map);
+
         marker.bindPopup(
             "<b>Parkomat:</b> "+id+
-            "<br><b>Aktywnych:</b> "+grouped[id].length+
-            "<br>"+grouped[id].join("<br>")
+            "<br><b>Lokalizacja:</b> "+p.location+
+            "<br><b>Ilość awarii:</b> "+activeEvents[id].length+
+            "<br>"+activeEvents[id].join("<br>")
         );
-
-        markers.push(marker);
     });
+}
 
-    let activeHTML = "";
-    Object.keys(grouped).forEach(id => {
-        activeHTML += `<div class="alarm-card">
-            <b>Parkomat ${id}</b><br>
-            Ilość awarii: ${grouped[id].length}<br>
-            ${grouped[id].join("<br>")}
+function renderActiveList(){
+    let html="";
+    Object.keys(activeEvents).forEach(id=>{
+        html+=`<div class="alarm-card">
+        <b>Parkomat ${id}</b><br>
+        Ilość: ${activeEvents[id].length}<br>
+        ${activeEvents[id].join("<br>")}
+        </div>`;
+    });
+    document.getElementById("activeList").innerHTML=html;
+}
+
+async function loadHistory(){
+    const res = await fetch(HISTORY_URL);
+    const text = await res.text();
+    const rows = text.split("\n").slice(1);
+
+    let html="";
+    rows.forEach(row=>{
+        let c=row.split(",");
+        if(c.length<5) return;
+        html+=`<div class="alarm-card">
+        <b>Parkomat ${c[0]}</b><br>
+        ${c[2]}<br>
+        Od: ${c[3]}<br>
+        Do: ${c[4]}
         </div>`;
     });
 
-    document.getElementById("activeList").innerHTML = activeHTML;
+    document.getElementById("historyList").innerHTML=html;
 }
 
-async function loadHistory() {
-    const response = await fetch(HISTORY_URL);
-    const data = await response.text();
-    const rows = data.split("\n").slice(1);
-
-    let html = `<input type="text" id="filterInput" placeholder="Filtruj po numerze...">`;
-
-    rows.forEach(row => {
-        let cols = row.split(",");
-        if(cols.length < 4) return;
-
-        html += `<div class="alarm-card">
-            <b>Parkomat ${cols[0]}</b><br>
-            ${cols[3]}<br>
-            ${cols[5]}
-        </div>`;
-    });
-
-    document.getElementById("historyList").innerHTML = html;
+async function init(){
+    await loadParkomaty();
+    await loadActive();
+    await loadHistory();
 }
 
-loadActive();
-loadHistory();
+init();
 
 </script>
 
