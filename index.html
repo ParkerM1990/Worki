@@ -1,93 +1,217 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Mapa offline z markerem</title>
+<meta charset="utf-8"/>
+<title>Monitoring Awarii Parkomatów</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
 <style>
-  #map {
-    width: 768px;   /* 3 kafelki x 256px */
-    height: 768px;  /* 3 kafelki x 256px */
-    position: relative;
-    border: 1px solid #333;
-    overflow: hidden;
-  }
-  .tile {
-    position: absolute;
-    width: 256px;
-    height: 256px;
-  }
-  #marker {
-    position: absolute;
-    width: 32px;
-    height: 32px;
-    background: url('marker.png') no-repeat center center;
-    background-size: contain;
-    pointer-events: none;
-  }
+body { margin:0; font-family: Arial; }
+#map { height: 100vh; width: 70%; float:left; }
+#sidebar {
+  width:30%;
+  height:100vh;
+  float:right;
+  overflow:auto;
+  padding:10px;
+  box-shadow:-3px 0 6px rgba(0,0,0,0.2);
+  background:#f8f8f8;
+}
+.counter {
+  position:absolute;
+  top:10px;
+  right:32%;
+  background:white;
+  padding:10px 15px;
+  border-radius:8px;
+  box-shadow:0 0 10px rgba(0,0,0,0.3);
+  font-weight:bold;
+  z-index:1000;
+}
+.section { margin-bottom:25px; }
+input { margin:3px 0; width:100%; padding:4px; }
+.awaria-item {
+  background:white;
+  padding:6px;
+  margin:4px 0;
+  border-left:4px solid orange;
+}
+.historia-item {
+  background:white;
+  padding:6px;
+  margin:4px 0;
+  border-left:4px solid gray;
+}
 </style>
 </head>
 <body>
 
-<div id="map">
-  <img id="tile00" class="tile" style="top:0;left:0" />
-  <img id="tile01" class="tile" style="top:0;left:256px" />
-  <img id="tile02" class="tile" style="top:0;left:512px" />
-  <img id="tile10" class="tile" style="top:256px;left:0" />
-  <img id="tile11" class="tile" style="top:256px;left:256px" />
-  <img id="tile12" class="tile" style="top:256px;left:512px" />
-  <img id="tile20" class="tile" style="top:512px;left:0" />
-  <img id="tile21" class="tile" style="top:512px;left:256px" />
-  <img id="tile22" class="tile" style="top:512px;left:512px" />
-  <div id="marker"></div>
+<div id="map"></div>
+<div class="counter" id="counter">Aktywne awarie: 0</div>
+
+<div id="sidebar">
+
+<h2>🔧 Aktywne awarie</h2>
+<div id="aktywnelist"></div>
+
+<hr/>
+
+<h2>📜 Historia (usunięte)</h2>
+
+<label>Filtr numer parkomatu</label>
+<input type="text" id="filterTerminal" placeholder="np. 13070706">
+
+<label>Od daty</label>
+<input type="date" id="filterFrom">
+
+<label>Do daty</label>
+<input type="date" id="filterTo">
+
+<button onclick="filterHistoria()">Filtruj</button>
+
+<div id="historialist"></div>
+
 </div>
 
 <script>
-  // ---- STAŁA LOKALIZACJA ----
-  const lat = 52.2297;    // szerokość
-  const lon = 21.0122;    // długość
-  const zoom = 16;        // poziom zoom
-  const tileSize = 256;   // rozmiar kafelka
 
-  // Funkcja lat/lon -> numer kafelka
-  function deg2num(lat_deg, lon_deg, zoom) {
-      const lat_rad = lat_deg * Math.PI / 180;
-      const n = 2 ** zoom;
-      const x = Math.floor((lon_deg + 180) / 360 * n);
-      const y = Math.floor((1 - Math.log(Math.tan(lat_rad) + 1/Math.cos(lat_rad))/Math.PI)/2 * n);
-      return {x, y};
-  }
+const parkomatyUrl = "parkomaty.csv";
+const aktywneUrl = "awarie_aktywne.csv";
+const historiaUrl = "awarie_historia.csv";
 
-  const tile = deg2num(lat, lon, zoom);
+let map = L.map('map').setView([52.23, 21.01], 13);
 
-  // Wyświetlamy 3x3 kafelki
-  const ids = [
-    ['tile00','tile01','tile02'],
-    ['tile10','tile11','tile12'],
-    ['tile20','tile21','tile22']
-  ];
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+}).addTo(map);
 
-  for (let dy=-1; dy<=1; dy++) {
-    for (let dx=-1; dx<=1; dx++) {
-      const id = ids[dy+1][dx+1];
-      const x = tile.x + dx;
-      const y = tile.y + dy;
-      document.getElementById(id).src = `Tiles/${zoom}/${x}/${y}.png`;
+let markers = {};
+let parkomaty = [];
+let aktywne = [];
+let historia = [];
+
+function loadCSV(url) {
+  return fetch(url)
+    .then(r => r.text())
+    .then(text => {
+      const rows = text.split("\n").map(r => r.split(","));
+      const headers = rows[0];
+      return rows.slice(1).map(r => {
+        let obj = {};
+        headers.forEach((h,i)=>obj[h.trim()]=r[i]);
+        return obj;
+      });
+    });
+}
+
+Promise.all([
+  loadCSV(parkomatyUrl),
+  loadCSV(aktywneUrl),
+  loadCSV(historiaUrl)
+]).then(data => {
+  parkomaty = data[0];
+  aktywne = data[1];
+  historia = data[2];
+
+  renderMap();
+  renderActiveList();
+  renderHistoriaList();
+  updateCounter();
+});
+
+function renderMap() {
+
+  parkomaty.forEach(p => {
+
+    const terminal = p.TerminalID;
+    const awarie = aktywne.filter(a => a.TerminalID === terminal);
+
+    const color = awarie.length > 0 ? "orange" : "green";
+
+    const marker = L.circleMarker(
+      [parseFloat(p.Lat), parseFloat(p.Lng)],
+      { radius:8, color:color }
+    ).addTo(map);
+
+    let popup = `
+      <b>Terminal:</b> ${terminal}<br/>
+      <b>Adres:</b> ${p.Adres}<br/>
+      <b>Ilość aktywnych awarii:</b> ${awarie.length}
+    `;
+
+    if (awarie.length > 0) {
+      popup += "<br/><b>Lista:</b><ul>";
+      awarie.forEach(a=>{
+        popup += `<li>${a.EventCodeName} (${a.ExternalEventCodeID})</li>`;
+      });
+      popup += "</ul>";
     }
-  }
 
-  // Wyliczamy dokładną pozycję markera w pikselach kontenera 3x3
-  const n = 2 ** zoom;
-  const lonX = (lon + 180) / 360 * n;
-  const latY = (1 - Math.log(Math.tan(lat*Math.PI/180)+1/Math.cos(lat*Math.PI/180))/Math.PI) / 2 * n;
+    marker.bindPopup(popup);
+    markers[terminal] = marker;
+  });
 
-  const pixelX = (lonX - (tile.x - 1)) * tileSize;  // uwzględnia lewy górny kafelek
-  const pixelY = (latY - (tile.y - 1)) * tileSize;
+}
 
-  const marker = document.getElementById('marker');
-  marker.style.left = `${pixelX - 16}px`;  // 16 = połowa szerokości markera
-  marker.style.top = `${pixelY - 32}px`;   // 32 = wysokość markera
+function updateCounter() {
+  document.getElementById("counter").innerText =
+    "Aktywne awarie: " + aktywne.length;
+}
+
+function renderActiveList() {
+  const div = document.getElementById("aktywnelist");
+  div.innerHTML = "";
+
+  aktywne.forEach(a=>{
+    div.innerHTML += `
+      <div class="awaria-item">
+        <b>${a.TerminalID}</b><br/>
+        ${a.EventCodeName}<br/>
+        ${a.EventDateUtc}
+      </div>
+    `;
+  });
+}
+
+function renderHistoriaList(filtered = historia) {
+  const div = document.getElementById("historialist");
+  div.innerHTML = "";
+
+  filtered.forEach(h=>{
+    div.innerHTML += `
+      <div class="historia-item">
+        <b>${h.TerminalID}</b><br/>
+        ${h.EventCodeName}<br/>
+        ${h.EventDateUtc}
+      </div>
+    `;
+  });
+}
+
+function filterHistoria() {
+
+  const terminal = document.getElementById("filterTerminal").value;
+  const from = document.getElementById("filterFrom").value;
+  const to = document.getElementById("filterTo").value;
+
+  let filtered = historia.filter(h=>{
+
+    let ok = true;
+
+    if (terminal && h.TerminalID !== terminal) ok = false;
+
+    if (from && new Date(h.EventDateUtc) < new Date(from)) ok = false;
+
+    if (to && new Date(h.EventDateUtc) > new Date(to)) ok = false;
+
+    return ok;
+  });
+
+  renderHistoriaList(filtered);
+}
+
 </script>
-
 </body>
 </html>
-
