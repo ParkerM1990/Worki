@@ -34,9 +34,9 @@ Monitoring Parkomatów
 <div id="historyList" class="tab-content"></div>
 
 <div class="bottom-nav">
-<button onclick="switchTab('map')" class="active-tab">Mapa</button>
-<button onclick="switchTab('activeList')">Aktywne</button>
-<button onclick="switchTab('historyList')">Historia</button>
+<button onclick="switchTab('map', event)" class="active-tab">Mapa</button>
+<button onclick="switchTab('activeList', event)">Aktywne</button>
+<button onclick="switchTab('historyList', event)">Historia</button>
 </div>
 
 <script>
@@ -52,31 +52,28 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 let allParkomaty = {};
 let activeEvents = {};
 
-function switchTab(tabId){
+function switchTab(tabId, evt){
     document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
     document.querySelectorAll('.bottom-nav button').forEach(btn=>btn.classList.remove('active-tab'));
-    event.target.classList.add('active-tab');
+    evt.target.classList.add('active-tab');
 }
 
 async function loadParkomaty(){
     const res = await fetch(PARKOMATY_URL);
     const text = await res.text();
-    const rows = text.split("\n").slice(0); // nie usuwamy niczego na razie
+    const rows = text.split("\n").slice(0);
 
     rows.forEach(row=>{
-        let c = row.split("\t"); // tabulator, bo Twój CSV wygląda na TSV
+        let c = row.split("\t"); // tabulator, bo Twój plik jest TSV
         if(c.length < 5) return;
 
         allParkomaty[c[0].trim()] = {
-            lat: parseFloat(c[3]),    // lat jest w kolumnie 3
+            lat: parseFloat(c[3]),    // lat w kolumnie 3
             lng: parseFloat(c[2]),    // lng w kolumnie 2
             location: c[4].trim()     // opis w kolumnie 4
         };
     });
-
-    console.log("Parkomaty:", allParkomaty); // debug
-}
 
 // 🔴 Wczytywanie aktywnych awarii
 async function loadActive(){
@@ -175,6 +172,7 @@ init();
 
 </body>
 </html>
+
 
 
 
