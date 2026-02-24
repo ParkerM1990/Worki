@@ -62,17 +62,20 @@ function switchTab(tabId){
 async function loadParkomaty(){
     const res = await fetch(PARKOMATY_URL);
     const text = await res.text();
-    const rows = text.split("\n").slice(1);
+    const rows = text.split("\n").slice(0); // nie usuwamy niczego na razie
 
     rows.forEach(row=>{
-        let c = row.split(",");
-        if(c.length<4) return;
-        allParkomaty[c[0]] = {
-            lat: parseFloat(c[1]),
-            lng: parseFloat(c[2]),
-            location: c[3]
+        let c = row.split("\t"); // tabulator, bo Twój CSV wygląda na TSV
+        if(c.length < 5) return;
+
+        allParkomaty[c[0].trim()] = {
+            lat: parseFloat(c[3]),    // lat jest w kolumnie 3
+            lng: parseFloat(c[2]),    // lng w kolumnie 2
+            location: c[4].trim()     // opis w kolumnie 4
         };
     });
+
+    console.log("Parkomaty:", allParkomaty); // debug
 }
 
 // 🔴 Wczytywanie aktywnych awarii
@@ -87,7 +90,7 @@ async function loadActive(){
         let c = row.split(",");
         if(c.length < 5) return; // minimalna liczba kolumn
 
-        let terminalID = c[0];                       // TerminalID
+        let terminalID = c[0].trim();                       // TerminalID
         let eventDesc = c[4] + " - " + c[3];         // EventCodeName + EventDateUtc
 
         if(!activeEvents[terminalID]) activeEvents[terminalID] = [];
@@ -172,6 +175,7 @@ init();
 
 </body>
 </html>
+
 
 
 
