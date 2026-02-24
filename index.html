@@ -62,23 +62,25 @@ function switchTab(tabId, evt){
 async function loadParkomaty(){
     const res = await fetch(PARKOMATY_URL);
     const text = await res.text();
-    const rows = text.split("\n");
+    const rows = text.split("\n").slice(1); // pomijamy nagłówek
 
-    rows.forEach(row=>{
+    allParkomaty = {};
+
+    rows.forEach(row => {
         if(!row.trim()) return; // pomijamy puste wiersze
-        let c = row.split("\t"); // **tabulator**, bo TSV
+        let c = row.split("\t"); // split po tabulatorze
 
         if(c.length < 5) return;
 
-        let id = c[0].trim();       // ID parkomatu
-        let lng = parseFloat(c[2]); // Longitude
-        let lat = parseFloat(c[3]); // Latitude
-        let location = c[4].trim(); // opis
+        let id = c[0].trim();           // TerminalID
+        let location = c[1].trim();     // Location
+        let lng = parseFloat(c[2]);     // Longitude
+        let lat = parseFloat(c[3]);     // Latitude
 
         allParkomaty[id] = { lat, lng, location };
     });
 
-    console.log("Wczytane parkomaty:", Object.keys(allParkomaty));
+    console.log("Wczytane parkomaty:", Object.keys(allParkomaty).length);
 }
 
 // 🔴 Wczytywanie aktywnych awarii
@@ -195,6 +197,7 @@ init();
 
 </body>
 </html>
+
 
 
 
