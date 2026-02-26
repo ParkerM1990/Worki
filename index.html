@@ -2,23 +2,96 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Monitoring Parkomatów</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <style>
-body { margin:0; font-family:Arial; background:#f4f6f9;}
-header { background:#1e293b; color:white; padding:15px; text-align:center; position:relative;}
-#alarmCounter { position:absolute; right:15px; top:15px; background:red; color:white; padding:5px 10px; border-radius:20px;}
-#map { height:calc(100vh - 120px);}
-.tab-content { display:none; height:calc(100vh - 120px); overflow:auto; padding:10px;}
-.active { display:block;}
-.bottom-nav { position:fixed; bottom:0; width:100%; display:flex; background:white; border-top:1px solid #ccc;}
-.bottom-nav button { flex:1; padding:12px; border:none; background:white;}
-.bottom-nav button.active-tab { background:#e2e8f0; font-weight:bold;}
-.alarm-card { background:white; padding:10px; margin-bottom:8px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05);}
+body { 
+    margin:0; 
+    font-family:Arial; 
+    background:#f4f6f9;
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+}
+
+header { 
+    background:#1e293b; 
+    color:white; 
+    padding:15px; 
+    text-align:center; 
+    position:relative;
+    flex-shrink:0;
+}
+
+#alarmCounter { 
+    position:absolute; 
+    right:15px; 
+    top:15px; 
+    background:red; 
+    color:white; 
+    padding:5px 10px; 
+    border-radius:20px;
+}
+
+.tab-content { 
+    flex:1;
+    overflow:auto;
+    display:none;
+    padding:12px;
+}
+
+.active { display:block; }
+
+#map {
+    width:100%;
+    height:100%;
+}
+
+.bottom-nav { 
+    display:flex; 
+    background:white; 
+    border-top:1px solid #ccc;
+    flex-shrink:0;
+}
+
+.bottom-nav button { 
+    flex:1; 
+    padding:14px; 
+    border:none; 
+    background:white;
+    font-size:14px;
+}
+
+.bottom-nav button.active-tab { 
+    background:#e2e8f0; 
+    font-weight:bold;
+}
+
+.alarm-card { 
+    background:white; 
+    padding:12px; 
+    margin-bottom:10px; 
+    border-radius:10px; 
+    box-shadow:0 2px 4px rgba(0,0,0,0.05);
+    word-wrap:break-word;
+    overflow-wrap:break-word;
+    white-space:normal;
+    font-size:14px;
+    line-height:1.4;
+}
+
+.leaflet-popup-content {
+    width: 320px !important;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    font-size:14px;
+    line-height:1.4;
+}
 </style>
 </head>
 
@@ -40,10 +113,11 @@ Monitoring Parkomatów
 </div>
 
 <script>
+
 // 🔹 LINKI DO CSV
-const PARKOMATY_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vReREVijVR33ZVud78Iv_oHBEkmDRkQxRxL97KN8gIbs9u5YPtVtvYsaQmHxrf7JWz_pQ_KdCaixonO/pub?output=csv";
-const ACTIVE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTj9Z5qWrmqdo88LUJtOcJsUkaNZEhxfsXTucOKWI2hbwtUKdGwdvQn4JsR7Wj27TJwxW7H0jnODbfR/pub?gid=0&single=true&output=csv";
-const HISTORY_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTj9Z5qWrmqdo88LUJtOcJsUkaNZEhxfsXTucOKWI2hbwtUKdGwdvQn4JsR7Wj27TJwxW7H0jnODbfR/pub?gid=1220391858&single=true&output=csv";
+const PARKOMATY_URL = "TU_WKLEJ_LINK_PARKOMATY";
+const ACTIVE_URL = "TU_WKLEJ_LINK_AKTYWNE";
+const HISTORY_URL = "TU_WKLEJ_LINK_HISTORIA";
 
 let map = L.map('map').setView([52.23,21.01],12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
@@ -51,7 +125,6 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 let allParkomaty = {};
 let activeEvents = {};
 
-// 🔹 Przełączanie zakładek
 function switchTab(tabId, evt){
     document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
@@ -83,7 +156,7 @@ async function loadParkomaty() {
     });
 }
 
-// 🔹 Wczytanie aktywnych awarii
+// 🔹 Wczytanie aktywnych
 async function loadActive() {
     const res = await fetch(ACTIVE_URL);
     let text = await res.text();
@@ -94,6 +167,7 @@ async function loadActive() {
 
     rows.forEach(row=>{
         if(!row.trim()) return;
+
         let c = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
         if(!c || c.length < 7) return;
 
@@ -114,7 +188,7 @@ async function loadActive() {
     renderActiveList();
 }
 
-// 🔹 Renderowanie mapy
+// 🔹 Mapa
 function renderMap(){
     map.eachLayer(layer=>{
         if(layer instanceof L.Marker) map.removeLayer(layer);
@@ -122,31 +196,44 @@ function renderMap(){
 
     Object.keys(activeEvents).forEach(id=>{
         if(!allParkomaty[id]) return;
+
         let p = allParkomaty[id];
         let marker = L.marker([p.lat, p.lng]).addTo(map);
-        marker.bindPopup(
-            `<b>Parkomat:</b> ${id}<br>`+
-            `<b>Lokalizacja:</b> ${p.location}<br>`+
-            `<b>Ilość awarii:</b> ${activeEvents[id].length}<br>`+
-            `${activeEvents[id].join("<br>")}`
-        );
+
+        marker.bindPopup(`
+            <div style="min-width:280px">
+                <div style="font-weight:bold; font-size:15px; margin-bottom:6px;">
+                    Parkomat ${id}
+                </div>
+                <div><b>Lokalizacja:</b> ${p.location}</div>
+                <div><b>Aktywne awarie:</b> ${activeEvents[id].length}</div>
+                <hr style="margin:6px 0;">
+                ${activeEvents[id].map(e => `<div style="margin-bottom:4px;">• ${e}</div>`).join("")}
+            </div>
+        `);
     });
 }
 
-// 🔹 Lista aktywnych awarii
+// 🔹 Lista aktywnych
 function renderActiveList(){
     let html = "";
+
     Object.keys(activeEvents).forEach(id=>{
-        html += `<div class="alarm-card">
-            <b>Parkomat ${id}</b><br>
-            Ilość awarii: ${activeEvents[id].length}<br>
-            ${activeEvents[id].join("<br>")}
+        html += `
+        <div class="alarm-card">
+            <div style="font-weight:bold; font-size:15px; margin-bottom:6px;">
+                Parkomat ${id}
+            </div>
+            <div><b>Ilość awarii:</b> ${activeEvents[id].length}</div>
+            <hr style="margin:6px 0;">
+            ${activeEvents[id].map(e => `<div style="margin-bottom:4px;">• ${e}</div>`).join("")}
         </div>`;
     });
+
     document.getElementById("activeList").innerHTML = html;
 }
 
-// 🔹 Wczytanie historii
+// 🔹 Historia
 async function loadHistory(){
     const res = await fetch(HISTORY_URL);
     let text = await res.text();
@@ -156,7 +243,8 @@ async function loadHistory(){
     let html = "";
     rows.forEach(row=>{
         if(!row.trim()) return;
-        let c = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+
+        let c=row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
         if(!c || c.length < 8) return;
 
         let terminalID = c[0].replace(/"/g,"").trim();
@@ -166,36 +254,40 @@ async function loadHistory(){
         let eventCode = c[4].replace(/"/g,"").trim();
         let hardware = c[6].replace(/"/g,"").trim();
 
-        html += `<div class="alarm-card">
-            <b>Parkomat ${terminalID}</b><br>
-            Lokalizacja: ${location}<br>
-            Awaria: ${eventCode} (${hardware})<br>
-            Od: ${start}<br>
-            Do: ${end}
+        html += `
+        <div class="alarm-card">
+            <div style="font-weight:bold; font-size:15px; margin-bottom:6px;">
+                Parkomat ${terminalID}
+            </div>
+            <div><b>Lokalizacja:</b> ${location}</div>
+            <div><b>Awaria:</b> ${eventCode} (${hardware})</div>
+            <div><b>Od:</b> ${start}</div>
+            <div><b>Do:</b> ${end}</div>
         </div>`;
     });
 
     document.getElementById("historyList").innerHTML = html;
 }
 
-// 🔹 Automatyczne odświeżanie co 2 minuty
+// 🔹 Auto refresh co 2 min
 function autoRefresh() {
     setInterval(async () => {
         await loadActive();
         await loadHistory();
-        console.log("Odświeżono dane aktywne i historię");
-    }, 120000); // 120000 ms = 2 min
+        console.log("Odświeżono dane");
+    }, 120000);
 }
 
-// 🔹 Inicjalizacja
+// 🔹 Start
 async function init(){
     await loadParkomaty();
     await loadActive();
     await loadHistory();
-    autoRefresh(); // uruchom automatyczne odświeżanie
+    autoRefresh();
 }
 
 init();
+
 </script>
 
 </body>
