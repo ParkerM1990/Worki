@@ -8,114 +8,21 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
 <style>
-body{
-  margin:0;
-  font-family:Arial;
-  background:#f4f6f9;
-}
-
-/* ===== HEADER ===== */
-header{
-  height:60px;
-  background:#1e293b;
-  color:white;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  position:relative;
-}
-
-#alarmCounter{
-  position:absolute;
-  right:15px;
-  background:red;
-  padding:4px 10px;
-  border-radius:20px;
-}
-
-/* ===== KONTENER GŁÓWNY ===== */
-.main{
-  position:fixed;
-  top:60px;
-  bottom:60px;
-  left:0;
-  right:0;
-  overflow:hidden;
-}
-
-/* ===== SEKCJE ===== */
-.section{
-  position:absolute;
-  inset:0;
-  display:none;
-  overflow:auto;
-}
-
-.section.active{
-  display:block;
-}
-
-/* ===== MAPA ===== */
-#map {
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-}
-
-/* ===== DOLNE MENU ===== */
-.bottom-nav{
-  position:fixed;
-  bottom:0;
-  height:60px;
-  width:100%;
-  display:flex;
-  background:white;
-  border-top:1px solid #ccc;
-}
-
-.bottom-nav button{
-  flex:1;
-  border:none;
-  background:white;
-  font-size:15px;
-  font-weight:600;
-}
-
-/* ===== LISTA ===== */
-.terminal-box{
-  background:white;
-  margin:12px;
-  padding:12px;
-  border-radius:10px;
-  box-shadow:0 2px 5px rgba(0,0,0,0.05);
-}
-
-.event-row{
-  border-top:1px solid #eee;
-  padding:6px 0;
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
-}
-
-.event-name{
-  flex:1;
-  word-break:break-word;
-}
-
-.event-time{
-  white-space:nowrap;
-}
-
-/* ===== POPUP FIX ===== */
-.leaflet-popup-content{
-  width:260px !important;
-  max-width:260px !important;
-  word-break:break-word;
-}
-  .leaflet-popup {
-  z-index: 9999;
-}
+body{margin:0;font-family:Arial;background:#f4f6f9;}
+header{height:60px;background:#1e293b;color:white;display:flex;align-items:center;justify-content:center;position:relative;}
+#alarmCounter{position:absolute;right:15px;background:red;padding:4px 10px;border-radius:20px;}
+.main{position:fixed;top:60px;bottom:60px;left:0;right:0;overflow:hidden;}
+.section{position:absolute;inset:0;display:none;overflow:auto;}
+.section.active{display:block;}
+#map { width:100%; height:100%; z-index:1;}
+.bottom-nav{position:fixed;bottom:0;height:60px;width:100%;display:flex;background:white;border-top:1px solid #ccc;}
+.bottom-nav button{flex:1;border:none;background:white;font-size:15px;font-weight:600;}
+.terminal-box{background:white;margin:12px;padding:12px;border-radius:10px;box-shadow:0 2px 5px rgba(0,0,0,0.05);}
+.event-row{border-top:1px solid #eee;padding:6px 0;display:flex;justify-content:space-between;gap:10px;}
+.event-name{flex:1;word-break:break-word;}
+.event-time{white-space:nowrap;}
+.leaflet-popup-content{width:260px !important;max-width:260px !important;word-break:break-word;}
+.leaflet-popup { z-index: 9999; }
 </style>
 </head>
 
@@ -127,19 +34,9 @@ Monitoring Parkomatów
 </header>
 
 <div class="main">
-
-  <div id="mapSection" class="section active">
-    <div id="map"></div>
-  </div>
-
-  <div id="awarieSection" class="section">
-    <div id="awarieList"></div>
-  </div>
-
-  <div id="historiaSection" class="section">
-    <div id="historiaList"></div>
-  </div>
-
+  <div id="mapSection" class="section active"><div id="map"></div></div>
+  <div id="awarieSection" class="section"><div id="awarieList"></div></div>
+  <div id="historiaSection" class="section"><div id="historiaList"></div></div>
 </div>
 
 <div class="bottom-nav">
@@ -152,116 +49,124 @@ Monitoring Parkomatów
 
 <script>
 
-// 🔹 LINKI DO CSV
-const PARKOMATY_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vReREVijVR33ZVud78Iv_oHBEkmDRkQxRxL97KN8gIbs9u5YPtVtvYsaQmHxrf7JWz_pQ_KdCaixonO/pub?output=csv";
+// LINKI CSV
+const PARKOMATY_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vReREVijVR33ZVud78Iv_oHBEkmDRkQxRxL97KN8gIbs9u5YPtVtvYsaQmHxrf7JWz_pQ_KdCaixonO/pub?output=csv";
+const ACTIVE_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTj9Z5qWrmqdo88LUJtOcJsUkaNZEhxfsXTucOKWI2hbwtUKdGwdvQn4JsR7Wj27TJwxW7H0jnODbfR/pub?gid=0&single=true&output=csv";
+const HISTORY_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTj9Z5qWrmqdo88LUJtOcJsUkaNZEhxfsXTucOKWI2hbwtUKdGwdvQn4JsR7Wj27TJwxW7H0jnODbfR/pub?gid=1220391858&single=true&output=csv";
 
-const ACTIVE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTj9Z5qWrmqdo88LUJtOcJsUkaNZEhxfsXTucOKWI2hbwtUKdGwdvQn4JsR7Wj27TJwxW7H0jnODbfR/pub?gid=0&single=true&output=csv";
-
-const HISTORY_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTj9Z5qWrmqdo88LUJtOcJsUkaNZEhxfsXTucOKWI2hbwtUKdGwdvQn4JsR7Wj27TJwxW7H0jnODbfR/pub?gid=1220391858&single=true&output=csv";
-
-/* ========= MAPA ========= */
-
+// MAPA
 let map = L.map('map').setView([53.484,18.753],13);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+let markers=[];
 
-let markers = [];
-
-/* ========= PRZEŁĄCZANIE ========= */
-
+// PRZEŁĄCZANIE ZAKŁADEK
 function showSection(id){
   document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
-
-  if(id === "mapSection"){
-    setTimeout(()=>map.invalidateSize(), 200);
-  }
+  if(id==="mapSection"){ setTimeout(()=>{ map.invalidateSize(); renderMarkers(); },200); }
 }
 
-/* ========= CSV PARSER ========= */
-
+// PROSTY CSV PARSER
 function parseCSV(text){
-  const rows=[];
+  const rows=[]; 
   const lines=text.replace(/^\uFEFF/,"").split(/\r?\n/);
-
   for(let line of lines){
     if(!line.trim()) continue;
-    const values=[];
-    let current="";
-    let inQuotes=false;
-
+    const values=[]; let current=""; let inQuotes=false;
     for(let i=0;i<line.length;i++){
       const char=line[i];
-      if(char === '"'){ inQuotes=!inQuotes; }
-      else if(char===',' && !inQuotes){
-        values.push(current);
-        current="";
-      }else{
-        current+=char;
-      }
+      if(char==='"'){ inQuotes=!inQuotes; }
+      else if(char===',' && !inQuotes){ values.push(current); current=""; }
+      else { current+=char; }
     }
     values.push(current);
     rows.push(values.map(v=>v.replace(/^"|"$/g,"")));
   }
-
   return rows;
 }
 
-/* ========= Wczytaj dane ========= */
+// DANE
+let allParkomaty={};
+let activeEvents={};
 
-async function loadActive(){
-  const res=await fetch(ACTIVE_URL);
-  const text=await res.text();
+// Wczytaj Parkomaty
+async function loadParkomaty(){
+  const res=await fetch(PARKOMATY_URL); const text=await res.text();
   const rows=parseCSV(text).slice(1);
-
-  let html="";
-  let count=0;
-
   rows.forEach(r=>{
-    if(!r[0]) return;
-
-    count++;
-
-    html+=`
-      <div class="terminal-box">
-        <b>Parkomat ${r[0]}</b><br>
-        ${r[4]} - ${r[6] || ""}<br>
-        ${r[3]}
-      </div>
-    `;
+    if(r.length<4) return;
+    const id=r[0].trim();
+    const lng=parseFloat(r[2]); const lat=parseFloat(r[3]);
+    if(!id || isNaN(lat) || isNaN(lng)) return;
+    allParkomaty[id]={lat,lng,location:r[1]};
   });
-
-  document.getElementById("awarieList").innerHTML=html;
-  document.getElementById("alarmCounter").innerText=count;
 }
 
-async function loadHistory(){
-  const res=await fetch(HISTORY_URL);
-  const text=await res.text();
+// Wczytaj aktywne awarie
+async function loadActive(){
+  const res=await fetch(ACTIVE_URL); const text=await res.text();
   const rows=parseCSV(text).slice(1);
-
-  let html="";
+  activeEvents={}; let html=""; let count=0;
 
   rows.forEach(r=>{
     if(!r[0]) return;
-
-    html+=`
-      <div class="terminal-box">
-        <b>Parkomat ${r[0]}</b><br>
-        ${r[4]} - ${r[6] || ""}<br>
-        Od: ${r[3]}<br>
-        Do: ${r[7] || ""}
-      </div>
-    `;
+    const id=r[0].trim(); 
+    if(!activeEvents[id]) activeEvents[id]=[];
+    activeEvents[id].push({name:r[4],hardware:r[6]||"",date:r[3]});
+    count++;
   });
 
+  // Lista w zakładce
+  html="";
+  Object.keys(activeEvents).forEach(id=>{
+    html+=`<div class="terminal-box"><b>Parkomat ${id}</b><br>`;
+    activeEvents[id].forEach(e=>{
+      html+=`• ${e.name} (${e.hardware}) - ${e.date}<br>`;
+    });
+    html+="</div>";
+  });
+  document.getElementById("awarieList").innerHTML=html;
+  document.getElementById("alarmCounter").innerText=count;
+
+  renderMarkers();
+}
+
+// Wczytaj historię
+async function loadHistory(){
+  const res=await fetch(HISTORY_URL); const text=await res.text();
+  const rows=parseCSV(text).slice(1);
+  let html="";
+  rows.forEach(r=>{
+    if(!r[0]) return;
+    html+=`<div class="terminal-box"><b>Parkomat ${r[0]}</b><br>`;
+    html+=`Od: ${r[3]}<br>Do: ${r[7]||""}<br>`;
+    html+=`${r[4]} (${r[6]||""})<br></div>`;
+  });
   document.getElementById("historiaList").innerHTML=html;
 }
 
-loadActive();
-loadHistory();
+// Renderowanie markerów
+function renderMarkers(){
+  markers.forEach(m=>map.removeLayer(m));
+  markers=[];
+  Object.keys(activeEvents).forEach(id=>{
+    const p=allParkomaty[id]; if(!p) return;
+    let popup=`<b>Parkomat ${id}</b><br>${p.location}<br>`;
+    activeEvents[id].forEach(e=>popup+=`• ${e.name} (${e.hardware}) - ${e.date}<br>`);
+    const m=L.marker([p.lat,p.lng]).addTo(map).bindPopup(popup);
+    markers.push(m);
+  });
+}
+
+// INIT
+async function init(){
+  await loadParkomaty();
+  await loadActive();
+  await loadHistory();
+}
+init();
 
 </script>
 
 </body>
 </html>
-
