@@ -8,57 +8,71 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
 <style>
-body {
+body{
   margin:0;
   font-family:Arial;
   background:#f4f6f9;
-  padding-bottom:65px;
 }
 
-header {
+/* ===== HEADER ===== */
+header{
+  height:60px;
   background:#1e293b;
   color:white;
-  padding:15px;
-  text-align:center;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   position:relative;
 }
 
-#alarmCounter {
+#alarmCounter{
   position:absolute;
   right:15px;
-  top:15px;
   background:red;
-  color:white;
-  padding:5px 10px;
+  padding:4px 10px;
   border-radius:20px;
-  font-weight:bold;
 }
 
-#map {
-  height:calc(100vh - 130px);
+/* ===== KONTENER GŁÓWNY ===== */
+.main{
+  position:fixed;
+  top:60px;
+  bottom:60px;
+  left:0;
+  right:0;
+  overflow:hidden;
 }
 
-.section {
+/* ===== SEKCJE ===== */
+.section{
+  position:absolute;
+  inset:0;
   display:none;
-  padding:12px;
+  overflow:auto;
 }
 
-.active-section {
+.section.active{
   display:block;
 }
 
-.bottom-nav {
+/* ===== MAPA ===== */
+#map{
+  width:100%;
+  height:100%;
+}
+
+/* ===== DOLNE MENU ===== */
+.bottom-nav{
   position:fixed;
   bottom:0;
-  width:100%;
   height:60px;
+  width:100%;
   display:flex;
   background:white;
   border-top:1px solid #ccc;
-  z-index:1000;
 }
 
-.bottom-nav button {
+.bottom-nav button{
   flex:1;
   border:none;
   background:white;
@@ -66,33 +80,36 @@ header {
   font-weight:600;
 }
 
-.terminal-box {
+/* ===== LISTA ===== */
+.terminal-box{
   background:white;
+  margin:12px;
   padding:12px;
   border-radius:10px;
-  margin-bottom:12px;
   box-shadow:0 2px 5px rgba(0,0,0,0.05);
 }
 
-.event-row {
+.event-row{
+  border-top:1px solid #eee;
+  padding:6px 0;
   display:flex;
   justify-content:space-between;
   gap:10px;
-  border-top:1px solid #eee;
-  padding:6px 0;
 }
 
-.event-name {
+.event-name{
   flex:1;
   word-break:break-word;
 }
 
-.event-time {
+.event-time{
   white-space:nowrap;
 }
 
-.leaflet-popup-content {
-  white-space:normal !important;
+/* ===== POPUP FIX ===== */
+.leaflet-popup-content{
+  width:260px !important;
+  max-width:260px !important;
   word-break:break-word;
 }
 </style>
@@ -105,14 +122,26 @@ Monitoring Parkomatów
 <div id="alarmCounter">0</div>
 </header>
 
-<div id="map" class="active-section"></div>
-<div id="awarie" class="section"><div id="awarieList"></div></div>
-<div id="historia" class="section"><div id="historiaList"></div></div>
+<div class="main">
+
+  <div id="mapSection" class="section active">
+    <div id="map"></div>
+  </div>
+
+  <div id="awarieSection" class="section">
+    <div id="awarieList"></div>
+  </div>
+
+  <div id="historiaSection" class="section">
+    <div id="historiaList"></div>
+  </div>
+
+</div>
 
 <div class="bottom-nav">
-<button onclick="showSection('map')">MAPA</button>
-<button onclick="showSection('awarie')">AWARIE</button>
-<button onclick="showSection('historia')">HISTORIA</button>
+  <button onclick="showSection('mapSection')">MAPA</button>
+  <button onclick="showSection('awarieSection')">AWARIE</button>
+  <button onclick="showSection('historiaSection')">HISTORIA</button>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -126,222 +155,106 @@ const ACTIVE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTj9Z5qWrmqd
 
 const HISTORY_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTj9Z5qWrmqdo88LUJtOcJsUkaNZEhxfsXTucOKWI2hbwtUKdGwdvQn4JsR7Wj27TJwxW7H0jnODbfR/pub?gid=1220391858&single=true&output=csv";
 
-/* =======================
-   MAPA
-======================= */
+/* ========= MAPA ========= */
 
 let map = L.map('map').setView([53.484,18.753],13);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-let allParkomaty = {};
-let activeEvents = {};
 let markers = [];
 
-/* =======================
-   CSV PARSER (bez rozjazdów)
-======================= */
+/* ========= PRZEŁĄCZANIE ========= */
 
-function parseCSV(text) {
-  const rows = [];
-  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/);
+function showSection(id){
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+
+  if(id === "mapSection"){
+    setTimeout(()=>map.invalidateSize(),200);
+  }
+}
+
+/* ========= CSV PARSER ========= */
+
+function parseCSV(text){
+  const rows=[];
+  const lines=text.replace(/^\uFEFF/,"").split(/\r?\n/);
 
   for(let line of lines){
     if(!line.trim()) continue;
-
-    const values = [];
-    let current = '';
-    let inQuotes = false;
+    const values=[];
+    let current="";
+    let inQuotes=false;
 
     for(let i=0;i<line.length;i++){
-      const char = line[i];
-
-      if(char === '"'){
-        inQuotes = !inQuotes;
-      }
-      else if(char === ',' && !inQuotes){
+      const char=line[i];
+      if(char === '"'){ inQuotes=!inQuotes; }
+      else if(char===',' && !inQuotes){
         values.push(current);
-        current = '';
-      }
-      else{
-        current += char;
+        current="";
+      }else{
+        current+=char;
       }
     }
     values.push(current);
-    rows.push(values.map(v => v.replace(/^"|"$/g,'')));
+    rows.push(values.map(v=>v.replace(/^"|"$/g,"")));
   }
 
   return rows;
 }
 
-/* =======================
-   Wczytaj Parkomaty
-======================= */
-
-async function loadParkomaty(){
-  const res = await fetch(PARKOMATY_URL);
-  const text = await res.text();
-  const rows = parseCSV(text).slice(1);
-
-  rows.forEach(r=>{
-    const id = r[0]?.trim();
-    const location = r[1];
-    const lng = parseFloat(r[2]);
-    const lat = parseFloat(r[3]);
-
-    if(id && !isNaN(lat) && !isNaN(lng)){
-      allParkomaty[id] = {lat,lng,location};
-    }
-  });
-}
-
-/* =======================
-   Wczytaj Aktywne
-======================= */
+/* ========= Wczytaj dane ========= */
 
 async function loadActive(){
-  const res = await fetch(ACTIVE_URL);
-  const text = await res.text();
-  const rows = parseCSV(text).slice(1);
+  const res=await fetch(ACTIVE_URL);
+  const text=await res.text();
+  const rows=parseCSV(text).slice(1);
 
-  activeEvents = {};
-
-  rows.forEach(r=>{
-    const id = r[0];
-    const date = r[3];
-    const event = r[4];
-    const hardware = r[6];
-
-    if(!id) return;
-
-    if(!activeEvents[id]) activeEvents[id]=[];
-
-    activeEvents[id].push({
-      name: `${event} - ${hardware || ""}`.trim(),
-      date: date
-    });
-  });
-
-  document.getElementById("alarmCounter").innerText =
-    Object.values(activeEvents).reduce((sum,a)=>sum+a.length,0);
-
-  renderMap();
-  renderActiveList();
-}
-
-/* =======================
-   Wczytaj Historia
-======================= */
-
-async function loadHistory(){
-  const res = await fetch(HISTORY_URL);
-  const text = await res.text();
-  const rows = parseCSV(text).slice(1);
-
-  let html = "";
+  let html="";
+  let count=0;
 
   rows.forEach(r=>{
-    const id = r[0];
-    const start = r[3];
-    const end = r[7];
-    const event = r[4];
-    const hardware = r[6];
+    if(!r[0]) return;
 
-    html += `
+    count++;
+
+    html+=`
       <div class="terminal-box">
-        <b>Parkomat ${id}</b><br>
-        ${event} - ${hardware || ""}<br>
-        Od: ${start}<br>
-        Do: ${end}
+        <b>Parkomat ${r[0]}</b><br>
+        ${r[4]} - ${r[6] || ""}<br>
+        ${r[3]}
       </div>
     `;
   });
 
-  document.getElementById("historiaList").innerHTML = html;
+  document.getElementById("awarieList").innerHTML=html;
+  document.getElementById("alarmCounter").innerText=count;
 }
 
-/* =======================
-   MAPA
-======================= */
+async function loadHistory(){
+  const res=await fetch(HISTORY_URL);
+  const text=await res.text();
+  const rows=parseCSV(text).slice(1);
 
-function renderMap(){
-  markers.forEach(m=>map.removeLayer(m));
-  markers=[];
-
-  Object.keys(activeEvents).forEach(id=>{
-    if(!allParkomaty[id]) return;
-
-    const p = allParkomaty[id];
-    let popup = `<b>Parkomat ${id}</b><br><br>`;
-
-    activeEvents[id].forEach(e=>{
-      popup += `
-        <div style="margin-bottom:6px;">
-          • ${e.name}<br>
-          <b>Data:</b> ${e.date}
-        </div>
-      `;
-    });
-
-    const marker = L.marker([p.lat,p.lng]).addTo(map).bindPopup(popup);
-    markers.push(marker);
-  });
-}
-
-/* =======================
-   Lista aktywnych
-======================= */
-
-function renderActiveList(){
   let html="";
 
-  Object.keys(activeEvents).forEach(id=>{
-    html+=`<div class="terminal-box">
-      <b>Parkomat ${id}</b><br>
-      Ilość awarii: ${activeEvents[id].length}
+  rows.forEach(r=>{
+    if(!r[0]) return;
+
+    html+=`
+      <div class="terminal-box">
+        <b>Parkomat ${r[0]}</b><br>
+        ${r[4]} - ${r[6] || ""}<br>
+        Od: ${r[3]}<br>
+        Do: ${r[7] || ""}
+      </div>
     `;
-
-    activeEvents[id].forEach(e=>{
-      html+=`
-        <div class="event-row">
-          <div class="event-name">${e.name}</div>
-          <div class="event-time">${e.date}</div>
-        </div>
-      `;
-    });
-
-    html+="</div>";
   });
 
-  document.getElementById("awarieList").innerHTML=html;
+  document.getElementById("historiaList").innerHTML=html;
 }
 
-/* =======================
-   ZAKŁADKI
-======================= */
-
-function showSection(id){
-  document.getElementById("map").classList.remove("active-section");
-  document.getElementById("awarie").classList.remove("active-section");
-  document.getElementById("historia").classList.remove("active-section");
-
-  document.getElementById(id).classList.add("active-section");
-
-  if(id==="map"){
-    setTimeout(()=>map.invalidateSize(),200);
-  }
-}
-
-/* =======================
-   INIT
-======================= */
-
-async function init(){
-  await loadParkomaty();
-  await loadActive();
-  await loadHistory();
-}
-
-init();
+loadActive();
+loadHistory();
 
 </script>
 
