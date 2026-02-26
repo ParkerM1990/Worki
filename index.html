@@ -56,9 +56,10 @@ header{
 }
 
 /* ===== MAPA ===== */
-#map{
-  width:100%;
-  height:100%;
+#map {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
 }
 
 /* ===== DOLNE MENU ===== */
@@ -111,6 +112,9 @@ header{
   width:260px !important;
   max-width:260px !important;
   word-break:break-word;
+}
+  .leaflet-popup {
+  z-index: 9999;
 }
 </style>
 </head>
@@ -169,7 +173,7 @@ function showSection(id){
   document.getElementById(id).classList.add("active");
 
   if(id === "mapSection"){
-    setTimeout(()=>map.invalidateSize(),200);
+    setTimeout(()=>map.invalidateSize(), 200);
   }
 }
 
@@ -260,3 +264,4 @@ loadHistory();
 
 </body>
 </html>
+
