@@ -141,8 +141,8 @@ async function loadParkomaty(){
 
   const nodeSet = new Set();  // zbiór unikalnych Node
 
-  rows.forEach(r=>{
-    if(r.length<5) return;
+  rows.forEach(r => {
+    if(r.length < 5) return;
     const id = r[0].trim();
     const lng = parseFloat(r[2]);
     const lat = parseFloat(r[3]);
@@ -156,14 +156,11 @@ async function loadParkomaty(){
   // Tworzymy posortowaną alfabetycznie listę Node
   allNodes = Array.from(nodeSet).sort();
 
-  // Wstawiamy listę rozwijaną w UI
-  const container = document.getElementById("nodeFilterContainer");
-  if(container){
-    let html = `<select id="nodeFilter" onchange="renderMarkers()">
-                  <option value="">Wszystkie Strefy</option>`;
-    allNodes.forEach(n=> html += `<option value="${n}">${n}</option>`);
-    html += `</select>`;
-    container.innerHTML = html;
+  // Wstawiamy opcje do istniejącego selecta w HTML
+  const nodeSelect = document.getElementById("nodeFilter");
+  if(nodeSelect){
+    nodeSelect.innerHTML = `<option value="">Wszystkie strefy</option>` +
+      allNodes.map(n => `<option value="${n}">${n}</option>`).join('');
   }
 }
 
@@ -293,4 +290,5 @@ init();
 
 </body>
 </html>
+
 
