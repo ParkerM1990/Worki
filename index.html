@@ -18,11 +18,7 @@ header{height:60px;background:#1e293b;color:white;display:flex;align-items:cente
 .bottom-nav{position:fixed;bottom:0;height:60px;width:100%;display:flex;background:white;border-top:1px solid #ccc;}
 .bottom-nav button{flex:1;border:none;background:white;font-size:15px;font-weight:600;}
 .terminal-box{background:white;margin:12px;padding:12px;border-radius:10px;box-shadow:0 2px 5px rgba(0,0,0,0.05);}
-.event-row{border-top:1px solid #eee;padding:6px 0;display:flex;justify-content:space-between;gap:10px;}
-.event-name{flex:1;word-break:break-word;}
-.event-time{white-space:nowrap;}
 .leaflet-popup-content{width:260px !important;max-width:260px !important;word-break:break-word;}
-.leaflet-popup { z-index: 9999; }
 </style>
 </head>
 
@@ -34,9 +30,35 @@ Monitoring Parkomatów
 </header>
 
 <div class="main">
-  <div id="mapSection" class="section active"><div id="map"></div></div>
-  <div id="awarieSection" class="section"><div id="awarieList"></div></div>
-  <div id="historiaSection" class="section"><div id="historiaList"></div></div>
+
+  <!-- MAPA -->
+  <div id="mapSection" class="section active">
+    <div style="position:absolute;z-index:1000;background:white;padding:8px;margin:10px;border-radius:8px;">
+      <select id="nodeFilter" onchange="renderMarkers()">
+        <option value="">Wszystkie strefy</option>
+      </select>
+    </div>
+    <div id="map"></div>
+  </div>
+
+  <!-- AWARIE -->
+  <div id="awarieSection" class="section">
+    <div style="padding:10px;">
+      <label>Data od:</label>
+      <input type="date" id="awarieDateFrom" onchange="loadActive()">
+    </div>
+    <div id="awarieList"></div>
+  </div>
+
+  <!-- HISTORIA -->
+  <div id="historiaSection" class="section">
+    <div style="padding:10px;">
+      <label>Data od:</label>
+      <input type="date" id="historiaDateFrom" onchange="loadHistory()">
+    </div>
+    <div id="historiaList"></div>
+  </div>
+
 </div>
 
 <div class="bottom-nav">
@@ -50,74 +72,99 @@ Monitoring Parkomatów
 <script>
 
 // LINKI CSV
-const PARKOMATY_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vReREVijVR33ZVud78Iv_oHBEkmDRkQxRxL97KN8gIbs9u5YPtVtvYsaQmHxrf7JWz_pQ_KdCaixonO/pub?output=csv";
-const ACTIVE_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTj9Z5qWrmqdo88LUJtOcJsUkaNZEhxfsXTucOKWI2hbwtUKdGwdvQn4JsR7Wj27TJwxW7H0jnODbfR/pub?gid=0&single=true&output=csv";
-const HISTORY_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTj9Z5qWrmqdo88LUJtOcJsUkaNZEhxfsXTucOKWI2hbwtUKdGwdvQn4JsR7Wj27TJwxW7H0jnODbfR/pub?gid=1220391858&single=true&output=csv";
+const PARKOMATY_URL="TU_WKLEJ_LINK_DO_PARKOMATOW";
+const ACTIVE_URL="TU_WKLEJ_LINK_DO_AKTYWNYCH";
+const HISTORY_URL="TU_WKLEJ_LINK_DO_HISTORII";
 
-// MAPA
+// MAPA – Warszawa
 let map = L.map('map').setView([52.2297, 21.0122], 12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-let markers=[];
 
-// PRZEŁĄCZANIE ZAKŁADEK
+let markers=[];
+let allParkomaty={};
+let activeEvents={};
+
+// Zakładki
 function showSection(id){
   document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
-  if(id==="mapSection"){ setTimeout(()=>{ map.invalidateSize(); renderMarkers(); },200); }
+  if(id==="mapSection"){
+    setTimeout(()=>{ map.invalidateSize(); renderMarkers(); },200);
+  }
 }
 
-// PROSTY CSV PARSER
+// CSV parser
 function parseCSV(text){
-  const rows=[]; 
+  const rows=[];
   const lines=text.replace(/^\uFEFF/,"").split(/\r?\n/);
   for(let line of lines){
     if(!line.trim()) continue;
-    const values=[]; let current=""; let inQuotes=false;
-    for(let i=0;i<line.length;i++){
-      const char=line[i];
-      if(char==='"'){ inQuotes=!inQuotes; }
-      else if(char===',' && !inQuotes){ values.push(current); current=""; }
-      else { current+=char; }
-    }
-    values.push(current);
-    rows.push(values.map(v=>v.replace(/^"|"$/g,"")));
+    rows.push(line.split(",").map(v=>v.replace(/^"|"$/g,"").trim()));
   }
   return rows;
 }
 
-// DANE
-let allParkomaty={};
-let activeEvents={};
-
-// Wczytaj Parkomaty
+// PARKOMATY
 async function loadParkomaty(){
-  const res=await fetch(PARKOMATY_URL); const text=await res.text();
+  const res=await fetch(PARKOMATY_URL);
+  const text=await res.text();
   const rows=parseCSV(text).slice(1);
+
+  let nodeSet=new Set();
+
   rows.forEach(r=>{
-    if(r.length<4) return;
-    const id=r[0].trim();
-    const lng=parseFloat(r[2]); const lat=parseFloat(r[3]);
+    if(r.length<5) return;
+
+    const id=r[0];
+    const lng=parseFloat(r[2]);
+    const lat=parseFloat(r[3]);
+    const node=r[4] || "";
+
     if(!id || isNaN(lat) || isNaN(lng)) return;
-    allParkomaty[id]={lat,lng,location:r[1]};
+
+    allParkomaty[id]={lat,lng,location:r[1],node};
+    if(node) nodeSet.add(node);
+  });
+
+  const select=document.getElementById("nodeFilter");
+  nodeSet.forEach(n=>{
+    const opt=document.createElement("option");
+    opt.value=n;
+    opt.textContent=n;
+    select.appendChild(opt);
   });
 }
 
-// Wczytaj aktywne awarie
+// AKTYWNE AWARIE
 async function loadActive(){
-  const res=await fetch(ACTIVE_URL); const text=await res.text();
+  const res=await fetch(ACTIVE_URL);
+  const text=await res.text();
   const rows=parseCSV(text).slice(1);
-  activeEvents={}; let html=""; let count=0;
+
+  activeEvents={};
+  let html="";
+  let count=0;
+
+  const dateFrom=document.getElementById("awarieDateFrom").value;
 
   rows.forEach(r=>{
     if(!r[0]) return;
-    const id=r[0].trim(); 
+
+    const eventDate=r[3]?.substring(0,10);
+    if(dateFrom && eventDate < dateFrom) return;
+
+    const id=r[0];
     if(!activeEvents[id]) activeEvents[id]=[];
-    activeEvents[id].push({name:r[4],hardware:r[6]||"",date:r[3]});
+
+    activeEvents[id].push({
+      name:r[4],
+      hardware:r[6]||"",
+      date:eventDate
+    });
+
     count++;
   });
 
-  // Lista w zakładce
-  html="";
   Object.keys(activeEvents).forEach(id=>{
     html+=`<div class="terminal-box"><b>Parkomat ${id}</b><br>`;
     activeEvents[id].forEach(e=>{
@@ -125,34 +172,53 @@ async function loadActive(){
     });
     html+="</div>";
   });
+
   document.getElementById("awarieList").innerHTML=html;
   document.getElementById("alarmCounter").innerText=count;
 
   renderMarkers();
 }
 
-// Wczytaj historię
+// HISTORIA
 async function loadHistory(){
-  const res=await fetch(HISTORY_URL); const text=await res.text();
+  const res=await fetch(HISTORY_URL);
+  const text=await res.text();
   const rows=parseCSV(text).slice(1);
+
+  const dateFrom=document.getElementById("historiaDateFrom").value;
   let html="";
+
   rows.forEach(r=>{
     if(!r[0]) return;
+
+    const startDate=r[3]?.substring(0,10);
+    if(dateFrom && startDate < dateFrom) return;
+
     html+=`<div class="terminal-box"><b>Parkomat ${r[0]}</b><br>`;
-    html+=`Od: ${r[3]}<br>Do: ${r[7]||""}<br>`;
+    html+=`Od: ${startDate}<br>Do: ${r[7]?.substring(0,10) || ""}<br>`;
     html+=`${r[4]} (${r[6]||""})<br></div>`;
   });
+
   document.getElementById("historiaList").innerHTML=html;
 }
 
-// Renderowanie markerów
+// MARKERY
 function renderMarkers(){
   markers.forEach(m=>map.removeLayer(m));
   markers=[];
+
+  const selectedNode=document.getElementById("nodeFilter").value;
+
   Object.keys(activeEvents).forEach(id=>{
-    const p=allParkomaty[id]; if(!p) return;
-    let popup=`<b>Parkomat ${id}</b><br>${p.location}<br>`;
-    activeEvents[id].forEach(e=>popup+=`• ${e.name} (${e.hardware}) - ${e.date}<br>`);
+    const p=allParkomaty[id];
+    if(!p) return;
+    if(selectedNode && p.node!==selectedNode) return;
+
+    let popup=`<b>Parkomat ${id}</b><br>${p.location}<br>Strefa: ${p.node}<br>`;
+    activeEvents[id].forEach(e=>{
+      popup+=`• ${e.name} (${e.hardware}) - ${e.date}<br>`;
+    });
+
     const m=L.marker([p.lat,p.lng]).addTo(map).bindPopup(popup);
     markers.push(m);
   });
@@ -164,10 +230,9 @@ async function init(){
   await loadActive();
   await loadHistory();
 }
+
 init();
 
 </script>
-
 </body>
 </html>
-
