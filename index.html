@@ -131,30 +131,40 @@ function parseCSV(text){
   return rows;
 }
 
-/* ===== PARKOMATY ===== */
-async function loadParkomaty(){
-  const res=await fetch(PARKOMATY_URL);
-  const rows=parseCSV(await res.text()).slice(1);
+// Zmienna globalna do przechowywania Node
+let allNodes = [];
 
-  const nodeSet=new Set();
+async function loadParkomaty(){
+  const res = await fetch(PARKOMATY_URL);
+  const text = await res.text();
+  const rows = parseCSV(text).slice(1);
+
+  const nodeSet = new Set();  // zbiór unikalnych Node
 
   rows.forEach(r=>{
     if(r.length<5) return;
-    const id=r[0].trim();
-    const lng=parseFloat(r[2]);
-    const lat=parseFloat(r[3]);
-    const node=r[4];
+    const id = r[0].trim();
+    const lng = parseFloat(r[2]);
+    const lat = parseFloat(r[3]);
+    const node = r[4].trim();
+    if(!id || isNaN(lat) || isNaN(lng)) return;
 
-    if(!id||isNaN(lat)||isNaN(lng)) return;
-
-    allParkomaty[id]={lat,lng,location:r[1],node};
+    allParkomaty[id] = { lat, lng, location: r[1], node };
     nodeSet.add(node);
   });
 
-  const select=document.getElementById("nodeFilter");
-  nodeSet.forEach(n=>{
-    select.innerHTML+=`<option value="${n}">${n}</option>`;
-  });
+  // Tworzymy posortowaną alfabetycznie listę Node
+  allNodes = Array.from(nodeSet).sort();
+
+  // Wstawiamy listę rozwijaną w UI
+  const container = document.getElementById("nodeFilterContainer");
+  if(container){
+    let html = `<select id="nodeFilter" onchange="renderMarkers()">
+                  <option value="">Wszystkie Strefy</option>`;
+    allNodes.forEach(n=> html += `<option value="${n}">${n}</option>`);
+    html += `</select>`;
+    container.innerHTML = html;
+  }
 }
 
 /* ===== AKTYWNE ===== */
@@ -283,3 +293,4 @@ init();
 
 </body>
 </html>
+
