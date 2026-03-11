@@ -257,7 +257,8 @@ function renderHistoryList(){
 
   historyEvents.forEach(r=>{
     if(!r[0]) return;
-    if(dateFilter && !r[3].startsWith(dateFilter.split("-").reverse().join("."))) return;
+
+    if(dateFilter && !r[3].startsWith(dateFilter)) return;
 
     html+=`<div class="terminal-box">
       <b>Parkomat ${r[0]}</b><br>
@@ -290,5 +291,6 @@ init();
 
 </body>
 </html>
+
 
 
