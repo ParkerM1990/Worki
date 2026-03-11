@@ -73,7 +73,15 @@ Monitoring Parkomatów
   <!-- AWARIE -->
   <div id="awarieSection" class="section">
     <div class="filter-bar">
-      <input type="date" id="activeDateFilter" onchange="renderActiveList()">
+      <input type="date" id="activeDateFrom" onchange="renderActiveList()">
+<input type="date" id="activeDateTo" onchange="renderActiveList()">
+
+<input type="text" id="activeTerminalFilter" placeholder="Nr parkomatu"
+oninput="renderActiveList()">
+
+<select id="activeEventFilter" onchange="renderActiveList()">
+<option value="">Wszystkie awarie</option>
+</select>
     </div>
     <div id="awarieList"></div>
   </div>
@@ -229,24 +237,59 @@ function renderMarkers(){
   });
 }
 
+function populateActiveEventFilter(){
+
+  const set = new Set();
+
+  Object.values(activeEvents).forEach(arr=>{
+    arr.forEach(e=>{
+      if(e.name) set.add(e.name);
+    });
+  });
+
+  const select = document.getElementById("activeEventFilter");
+
+  select.innerHTML = `<option value="">Wszystkie awarie</option>` +
+    Array.from(set).sort().map(e=>`<option value="${e}">${e}</option>`).join('');
+}
+  
 /* ===== RENDER AWARIE ===== */
 function renderActiveList(){
 
-  const dateFilter=document.getElementById("activeDateFilter").value;
-  let html="";
+  const dateFrom = document.getElementById("activeDateFrom").value;
+  const dateTo = document.getElementById("activeDateTo").value;
+  const terminalFilter = document.getElementById("activeTerminalFilter").value.trim();
+  const eventFilter = document.getElementById("activeEventFilter").value;
+
+  const from = dateFrom ? new Date(dateFrom) : null;
+  const to = dateTo ? new Date(dateTo) : null;
+
+  let html = "";
 
   Object.keys(activeEvents).forEach(id=>{
-    const p=allParkomaty[id];
+    const p = allParkomaty[id];
     if(!p) return;
 
-    html+=`<div class="terminal-box"><b>Parkomat ${id}</b><br>${p.location}<br><br>`;
+    const filteredEvents = activeEvents[id].filter(e=>{
+      const eventDate = new Date(e.date);
 
-    activeEvents[id].forEach(e=>{
-      if(dateFilter && !e.date.startsWith(dateFilter)) return;
-      html+=`• ${e.name} (${e.hardware})<br><small>${e.date}</small><br>`;
+      if(from && eventDate < from) return false;
+      if(to && eventDate > to) return false;
+      if(terminalFilter && !id.includes(terminalFilter)) return false;
+      if(eventFilter && e.name !== eventFilter) return false;
+
+      return true;
     });
 
-    html+=`<br>
+    if(filteredEvents.length === 0) return;
+
+    html += `<div class="terminal-box"><b>Parkomat ${id}</b><br>${p.location}<br><br>`;
+
+    filteredEvents.forEach(e=>{
+      html += `• ${e.name} (${e.hardware})<br><small>${e.date}</small><br>`;
+    });
+
+    html += `<br>
       <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}"
          target="_blank"
          style="background:#16a34a;color:white;padding:6px 10px;border-radius:6px;text-decoration:none;">
@@ -254,7 +297,7 @@ function renderActiveList(){
       </a></div>`;
   });
 
-  document.getElementById("awarieList").innerHTML=html;
+  document.getElementById("awarieList").innerHTML = html;
 }
 
 function populateEventFilter(){
@@ -325,6 +368,7 @@ async function init(){
   await loadActive();
   await loadHistory();
 
+  populateActiveEventFilter();
   populateEventFilter();
 
   renderAll();
@@ -336,6 +380,7 @@ init();
 
 </body>
 </html>
+
 
 
 
