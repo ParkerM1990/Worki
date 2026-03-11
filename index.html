@@ -81,7 +81,15 @@ Monitoring Parkomatów
   <!-- HISTORIA -->
   <div id="historiaSection" class="section">
     <div class="filter-bar">
-      <input type="date" id="historyDateFilter" onchange="renderHistoryList()">
+      <input type="date" id="historyDateFrom" onchange="renderHistoryList()">
+<input type="date" id="historyDateTo" onchange="renderHistoryList()">
+
+<input type="text" id="historyTerminalFilter" placeholder="Nr parkomatu"
+oninput="renderHistoryList()">
+
+<select id="historyEventFilter" onchange="renderHistoryList()">
+<option value="">Wszystkie awarie</option>
+</select>
     </div>
     <div id="historiaList"></div>
   </div>
@@ -234,7 +242,7 @@ function renderActiveList(){
     html+=`<div class="terminal-box"><b>Parkomat ${id}</b><br>${p.location}<br><br>`;
 
     activeEvents[id].forEach(e=>{
-      if(dateFilter && !e.date.startsWith(dateFilter.split("-").reverse().join("."))) return;
+      if(dateFilter && !e.date.startsWith(dateFilter)) return;
       html+=`• ${e.name} (${e.hardware})<br><small>${e.date}</small><br>`;
     });
 
@@ -249,24 +257,58 @@ function renderActiveList(){
   document.getElementById("awarieList").innerHTML=html;
 }
 
+function populateEventFilter(){
+
+  const set = new Set();
+
+  historyEvents.forEach(r=>{
+    if(r[4]) set.add(r[4]);
+  });
+
+  const select=document.getElementById("historyEventFilter");
+
+  select.innerHTML=
+    `<option value="">Wszystkie awarie</option>` +
+    Array.from(set).sort().map(e =>
+      `<option value="${e}">${e}</option>`
+    ).join('');
+}
+      
 /* ===== RENDER HISTORIA ===== */
 function renderHistoryList(){
 
-  const dateFilter=document.getElementById("historyDateFilter").value;
+  const dateFrom=document.getElementById("historyDateFrom").value;
+  const dateTo=document.getElementById("historyDateTo").value;
+  const terminalFilter=document.getElementById("historyTerminalFilter").value.trim();
+  const eventFilter=document.getElementById("historyEventFilter").value;
+
+  const from=dateFrom ? new Date(dateFrom) : null;
+  const to=dateTo ? new Date(dateTo) : null;
+
   let html="";
 
-  historyEvents.forEach(r=>{
-    if(!r[0]) return;
+  historyEvents
+    .sort((a,b)=> new Date(b[3]) - new Date(a[3]))
+    .forEach(r=>{
 
-    if(dateFilter && !r[3].startsWith(dateFilter)) return;
+      if(!r[0]) return;
 
-    html+=`<div class="terminal-box">
-      <b>Parkomat ${r[0]}</b><br>
-      ${r[4]} (${r[6]||""})<br>
-      Od: ${r[3]}<br>
-      Do: ${r[7]||""}
-    </div>`;
-  });
+      const eventDate=new Date(r[3]);
+
+      if(from && eventDate < from) return;
+      if(to && eventDate > to) return;
+
+      if(terminalFilter && !r[0].includes(terminalFilter)) return;
+
+      if(eventFilter && r[4] !== eventFilter) return;
+
+      html+=`<div class="terminal-box">
+        <b>Parkomat ${r[0]}</b><br>
+        ${r[4]} (${r[6]||""})<br>
+        Od: ${r[3]}<br>
+        Do: ${r[7]||""}
+      </div>`;
+    });
 
   document.getElementById("historiaList").innerHTML=html;
 }
@@ -282,6 +324,9 @@ async function init(){
   await loadParkomaty();
   await loadActive();
   await loadHistory();
+
+  populateEventFilter();
+
   renderAll();
 }
 
@@ -291,6 +336,7 @@ init();
 
 </body>
 </html>
+
 
 
 
