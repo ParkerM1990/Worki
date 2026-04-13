@@ -24,7 +24,7 @@ header{height:60px;background:#020617;color:white;display:flex;align-items:cente
 }
 .bottom-nav button{
   flex:1;border:none;background:none;color:#e5e7eb;
-  font-weight:600;font-size:14px;
+  font-weight:600;
 }
 
 .filter-bar{
@@ -61,7 +61,6 @@ select,input{
   color:white;
   border:none;
   font-size:20px;
-  box-shadow:0 6px 18px rgba(0,0,0,0.5);
 }
 </style>
 </head>
@@ -90,7 +89,7 @@ Monitoring Parkomatów
   <div class="filter-bar">
     <input type="date" id="activeDateFrom" onchange="renderActiveList()">
     <input type="date" id="activeDateTo" onchange="renderActiveList()">
-    <input type="text" id="activeTerminalFilter" placeholder="Nr parkomatu" oninput="renderActiveList()">
+    <input type="text" id="activeTerminalFilter" oninput="renderActiveList()">
     <select id="activeEventFilter" onchange="renderActiveList()">
       <option value="">Wszystkie awarie</option>
     </select>
@@ -103,7 +102,7 @@ Monitoring Parkomatów
   <div class="filter-bar">
     <input type="date" id="historyDateFrom" onchange="renderHistoryList()">
     <input type="date" id="historyDateTo" onchange="renderHistoryList()">
-    <input type="text" id="historyTerminalFilter" oninput="renderHistoryList()" placeholder="Nr parkomatu">
+    <input type="text" id="historyTerminalFilter" oninput="renderHistoryList()">
     <select id="historyEventFilter" onchange="renderHistoryList()">
       <option value="">Wszystkie awarie</option>
     </select>
@@ -114,9 +113,9 @@ Monitoring Parkomatów
 </div>
 
 <div class="bottom-nav">
-  <button onclick="showSection('mapSection')">MAPA</button>
-  <button onclick="showSection('awarieSection')">AWARIE</button>
-  <button onclick="showSection('historiaSection')">HISTORIA</button>
+<button onclick="showSection('mapSection')">MAPA</button>
+<button onclick="showSection('awarieSection')">AWARIE</button>
+<button onclick="showSection('historiaSection')">HISTORIA</button>
 </div>
 
 <button id="locateBtn">📍</button>
@@ -125,55 +124,51 @@ Monitoring Parkomatów
 
 <script>
 
-/* ===== GOOGLE SHEETS ===== */
+/* ===== SOURCES ===== */
 const PARKOMATY_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vReREVijVR33ZVud78Iv_oHBEkmDRkQxRxL97KN8gIbs9u5YPtVtvYsaQmHxrf7JWz_pQ_KdCaixonO/pub?output=csv";
 const ACTIVE_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTj9Z5qWrmqdo88LUJtOcJsUkaNZEhxfsXTucOKWI2hbwtUKdGwdvQn4JsR7Wj27TJwxW7H0jnODbfR/pub?gid=0&single=true&output=csv";
 const HISTORY_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTj9Z5qWrmqdo88LUJtOcJsUkaNZEhxfsXTucOKWI2hbwtUKdGwdvQn4JsR7Wj27TJwxW7H0jnODbfR/pub?gid=1220391858&single=true&output=csv";
 
-/* ===== MAPA (DARK APP STYLE) ===== */
+/* ===== MAPA ===== */
 let map = L.map('map').setView([52.2297,21.0122],12);
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
 let markerLayer = L.layerGroup().addTo(map);
 
-/* ===== DANE ===== */
+/* ===== DATA ===== */
 let allParkomaty={};
 let activeEvents={};
 let historyEvents=[];
 
 /* ===== CSV ===== */
-function parseCSV(text){
-  return text.replace(/^\uFEFF/,"")
-    .split("\n")
-    .filter(l=>l.trim())
+function parseCSV(t){
+  return t.replace(/^\uFEFF/,"").split("\n").filter(l=>l.trim())
     .map(l=>l.split(",").map(v=>v.replace(/"/g,"")));
 }
 
-/* ===== LOAD PARKOMATY ===== */
+/* ===== LOAD ===== */
 async function loadParkomaty(){
   const rows=parseCSV(await (await fetch(PARKOMATY_URL)).text()).slice(1);
-
-  const nodeSet=new Set();
+  const set=new Set();
 
   rows.forEach(r=>{
     const id=r[0]?.trim();
-    const lng=parseFloat(r[2]);
     const lat=parseFloat(r[3]);
-    const node=r[4]?.trim();
+    const lng=parseFloat(r[2]);
+    const node=r[4];
 
-    if(!id || isNaN(lat) || isNaN(lng)) return;
+    if(!id||isNaN(lat)||isNaN(lng)) return;
 
     allParkomaty[id]={lat,lng,location:r[1],node};
-    nodeSet.add(node);
+    set.add(node);
   });
 
-  const sel=document.getElementById("nodeFilter");
-  sel.innerHTML=`<option value="">Wszystkie strefy</option>`+
-    [...nodeSet].sort().map(n=>`<option value="${n}">${n}</option>`).join('');
+  document.getElementById("nodeFilter").innerHTML=
+    `<option value="">Wszystkie strefy</option>`+
+    [...set].sort().map(n=>`<option>${n}</option>`).join('');
 }
 
-/* ===== LOAD ACTIVE ===== */
 async function loadActive(){
   const rows=parseCSV(await (await fetch(ACTIVE_URL)).text()).slice(1);
 
@@ -192,30 +187,27 @@ async function loadActive(){
   document.getElementById("alarmCounter").innerText=count;
 }
 
-/* ===== LOAD HISTORY ===== */
 async function loadHistory(){
   historyEvents=parseCSV(await (await fetch(HISTORY_URL)).text()).slice(1);
 }
 
-/* ===== MARKER ICON ===== */
-function color(events){
-  if(events.some(e=>e.name.toLowerCase().includes("offline"))) return "#dc2626";
-  if(events.some(e=>e.name.toLowerCase().includes("papier"))) return "#f59e0b";
+/* ===== MARKERS ===== */
+function color(ev){
+  if(ev.some(e=>e.name.includes("offline"))) return "#dc2626";
+  if(ev.some(e=>e.name.includes("papier"))) return "#f59e0b";
   return "#3b82f6";
 }
 
-function icon(events){
+function icon(ev){
   return L.divIcon({
     className:"",
     html:`<div style="width:16px;height:16px;border-radius:50%;
-    background:${color(events)};border:3px solid white;
-    box-shadow:0 0 10px rgba(0,0,0,0.7)"></div>`
+    background:${color(ev)};border:3px solid white"></div>`
   });
 }
 
-/* ===== RENDER MAPA + AUTO ZOOM ===== */
+/* ===== MAP ===== */
 function renderMarkers(){
-
   const node=document.getElementById("nodeFilter").value;
   markerLayer.clearLayers();
 
@@ -232,6 +224,12 @@ function renderMarkers(){
       popup+=`• ${e.name}<br><small>${e.date}</small><br>`;
     });
 
+    popup+=`
+      <br>
+      <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}"
+      target="_blank">🧭 Nawiguj</a>
+    `;
+
     L.marker([p.lat,p.lng],{icon:icon(activeEvents[id])})
       .bindPopup(popup)
       .addTo(markerLayer);
@@ -239,15 +237,8 @@ function renderMarkers(){
     pts.push([p.lat,p.lng]);
   });
 
-  if(pts.length===0){
-    map.setView([52.2297,21.0122],6);
-    return;
-  }
-
-  if(pts.length===1){
-    map.setView(pts[0],15);
-    return;
-  }
+  if(pts.length===0) return map.setView([52.2,21.0],6);
+  if(pts.length===1) return map.setView(pts[0],15);
 
   map.fitBounds(L.latLngBounds(pts),{padding:[50,50],maxZoom:16});
 }
@@ -261,6 +252,27 @@ function showSection(id){
 
 function renderAll(){
   renderMarkers();
+  renderActiveList();
+  renderHistoryList();
+}
+
+/* ===== LISTY (NAPRAWIONE) ===== */
+function renderActiveList(){
+  let html="";
+  Object.keys(activeEvents).forEach(id=>{
+    const p=allParkomaty[id];
+    if(!p) return;
+
+    html+=`<div class="terminal-box"><b>${id}</b><br>${p.location}</div>`;
+  });
+  document.getElementById("awarieList").innerHTML=html;
+}
+
+function renderHistoryList(){
+  document.getElementById("historiaList").innerHTML=
+    historyEvents.slice(0,50).map(r=>
+      `<div class="terminal-box">${r[0]} - ${r[4]}</div>`
+    ).join("");
 }
 
 /* ===== INIT ===== */
