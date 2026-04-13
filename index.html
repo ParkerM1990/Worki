@@ -8,45 +8,60 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
 <style>
-body{margin:0;font-family:Arial;background:#f4f6f9;}
-header{height:60px;background:#1e293b;color:white;display:flex;align-items:center;justify-content:center;position:relative;}
-#alarmCounter{position:absolute;right:15px;background:red;padding:4px 10px;border-radius:20px;}
+body{margin:0;font-family:Arial;background:#0b1220;color:#e5e7eb;}
+header{height:60px;background:#020617;color:white;display:flex;align-items:center;justify-content:center;position:relative;}
+#alarmCounter{position:absolute;right:15px;background:#dc2626;padding:4px 10px;border-radius:20px;}
 
 .main{position:fixed;top:60px;bottom:60px;left:0;right:0;overflow:hidden;}
-.section{position:absolute;inset:0;display:none;overflow:auto;padding-bottom:20px;}
+.section{position:absolute;inset:0;display:none;overflow:auto;}
 .section.active{display:block;}
 
-#map { width:100%; height:100%; }
+#map{width:100%;height:100%;}
 
-.bottom-nav{position:fixed;bottom:0;height:60px;width:100%;display:flex;background:white;border-top:1px solid #ccc;}
-.bottom-nav button{flex:1;border:none;background:white;font-size:15px;font-weight:600;}
+.bottom-nav{
+  position:fixed;bottom:0;height:60px;width:100%;
+  display:flex;background:#020617;border-top:1px solid #1f2937;
+}
+.bottom-nav button{
+  flex:1;border:none;background:none;color:#e5e7eb;
+  font-weight:600;font-size:14px;
+}
 
 .filter-bar{
   padding:10px;
-  background:white;
-  border-bottom:1px solid #ddd;
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
+  background:#020617;
+  border-bottom:1px solid #1f2937;
+  display:flex;gap:10px;flex-wrap:wrap;
 }
 
 select,input{
   padding:6px;
   border-radius:6px;
-  border:1px solid #ccc;
+  border:1px solid #374151;
+  background:#0b1220;
+  color:white;
 }
 
 .terminal-box{
-  background:white;
+  background:#0b1220;
   margin:12px;
   padding:12px;
   border-radius:10px;
-  box-shadow:0 2px 5px rgba(0,0,0,0.05);
+  border:1px solid #1f2937;
 }
 
-.leaflet-popup-content{
-  width:280px !important;
-  word-break:break-word;
+#locateBtn{
+  position:fixed;
+  right:15px;
+  bottom:90px;
+  width:52px;
+  height:52px;
+  border-radius:50%;
+  background:#2563eb;
+  color:white;
+  border:none;
+  font-size:20px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.5);
 }
 </style>
 </head>
@@ -60,47 +75,41 @@ Monitoring Parkomatów
 
 <div class="main">
 
-  <!-- MAPA -->
-  <div id="mapSection" class="section active">
-    <div class="filter-bar">
-      <select id="nodeFilter" onchange="renderAll()">
-        <option value="">Wszystkie strefy</option>
-      </select>
-    </div>
-    <div id="map" style="height:calc(100% - 60px)"></div>
+<!-- MAPA -->
+<div id="mapSection" class="section active">
+  <div class="filter-bar">
+    <select id="nodeFilter" onchange="renderAll()">
+      <option value="">Wszystkie strefy</option>
+    </select>
   </div>
+  <div id="map"></div>
+</div>
 
-  <!-- AWARIE -->
-  <div id="awarieSection" class="section">
-    <div class="filter-bar">
-      <input type="date" id="activeDateFrom" onchange="renderActiveList()">
-<input type="date" id="activeDateTo" onchange="renderActiveList()">
-
-<input type="text" id="activeTerminalFilter" placeholder="Nr parkomatu"
-oninput="renderActiveList()">
-
-<select id="activeEventFilter" onchange="renderActiveList()">
-<option value="">Wszystkie awarie</option>
-</select>
-    </div>
-    <div id="awarieList"></div>
+<!-- AWARIE -->
+<div id="awarieSection" class="section">
+  <div class="filter-bar">
+    <input type="date" id="activeDateFrom" onchange="renderActiveList()">
+    <input type="date" id="activeDateTo" onchange="renderActiveList()">
+    <input type="text" id="activeTerminalFilter" placeholder="Nr parkomatu" oninput="renderActiveList()">
+    <select id="activeEventFilter" onchange="renderActiveList()">
+      <option value="">Wszystkie awarie</option>
+    </select>
   </div>
+  <div id="awarieList"></div>
+</div>
 
-  <!-- HISTORIA -->
-  <div id="historiaSection" class="section">
-    <div class="filter-bar">
-      <input type="date" id="historyDateFrom" onchange="renderHistoryList()">
-<input type="date" id="historyDateTo" onchange="renderHistoryList()">
-
-<input type="text" id="historyTerminalFilter" placeholder="Nr parkomatu"
-oninput="renderHistoryList()">
-
-<select id="historyEventFilter" onchange="renderHistoryList()">
-<option value="">Wszystkie awarie</option>
-</select>
-    </div>
-    <div id="historiaList"></div>
+<!-- HISTORIA -->
+<div id="historiaSection" class="section">
+  <div class="filter-bar">
+    <input type="date" id="historyDateFrom" onchange="renderHistoryList()">
+    <input type="date" id="historyDateTo" onchange="renderHistoryList()">
+    <input type="text" id="historyTerminalFilter" oninput="renderHistoryList()" placeholder="Nr parkomatu">
+    <select id="historyEventFilter" onchange="renderHistoryList()">
+      <option value="">Wszystkie awarie</option>
+    </select>
   </div>
+  <div id="historiaList"></div>
+</div>
 
 </div>
 
@@ -110,18 +119,22 @@ oninput="renderHistoryList()">
   <button onclick="showSection('historiaSection')">HISTORIA</button>
 </div>
 
+<button id="locateBtn">📍</button>
+
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
 
-/* ===== LINKI CSV ===== */
+/* ===== GOOGLE SHEETS ===== */
 const PARKOMATY_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vReREVijVR33ZVud78Iv_oHBEkmDRkQxRxL97KN8gIbs9u5YPtVtvYsaQmHxrf7JWz_pQ_KdCaixonO/pub?output=csv";
 const ACTIVE_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTj9Z5qWrmqdo88LUJtOcJsUkaNZEhxfsXTucOKWI2hbwtUKdGwdvQn4JsR7Wj27TJwxW7H0jnODbfR/pub?gid=0&single=true&output=csv";
 const HISTORY_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTj9Z5qWrmqdo88LUJtOcJsUkaNZEhxfsXTucOKWI2hbwtUKdGwdvQn4JsR7Wj27TJwxW7H0jnODbfR/pub?gid=1220391858&single=true&output=csv";
 
-/* ===== MAPA ===== */
+/* ===== MAPA (DARK APP STYLE) ===== */
 let map = L.map('map').setView([52.2297,21.0122],12);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
 let markerLayer = L.layerGroup().addTo(map);
 
 /* ===== DANE ===== */
@@ -129,68 +142,48 @@ let allParkomaty={};
 let activeEvents={};
 let historyEvents=[];
 
-/* ===== PRZEŁĄCZANIE ===== */
-function showSection(id){
-  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-  if(id==="mapSection"){ setTimeout(()=>map.invalidateSize(),200); }
-}
-
-/* ===== CSV PARSER ===== */
+/* ===== CSV ===== */
 function parseCSV(text){
-  const rows=[];
-  const lines=text.replace(/^\uFEFF/,"").split(/\r?\n/);
-  for(let line of lines){
-    if(!line.trim()) continue;
-    rows.push(line.split(",").map(v=>v.replace(/^"|"$/g,"")));
-  }
-  return rows;
+  return text.replace(/^\uFEFF/,"")
+    .split("\n")
+    .filter(l=>l.trim())
+    .map(l=>l.split(",").map(v=>v.replace(/"/g,"")));
 }
 
-// Zmienna globalna do przechowywania Node
-let allNodes = [];
-
+/* ===== LOAD PARKOMATY ===== */
 async function loadParkomaty(){
-  const res = await fetch(PARKOMATY_URL);
-  const text = await res.text();
-  const rows = parseCSV(text).slice(1);
+  const rows=parseCSV(await (await fetch(PARKOMATY_URL)).text()).slice(1);
 
-  const nodeSet = new Set();  // zbiór unikalnych Node
+  const nodeSet=new Set();
 
-  rows.forEach(r => {
-    if(r.length < 5) return;
-    const id = r[0].trim();
-    const lng = parseFloat(r[2]);
-    const lat = parseFloat(r[3]);
-    const node = r[4].trim();
+  rows.forEach(r=>{
+    const id=r[0]?.trim();
+    const lng=parseFloat(r[2]);
+    const lat=parseFloat(r[3]);
+    const node=r[4]?.trim();
+
     if(!id || isNaN(lat) || isNaN(lng)) return;
 
-    allParkomaty[id] = { lat, lng, location: r[1], node };
+    allParkomaty[id]={lat,lng,location:r[1],node};
     nodeSet.add(node);
   });
 
-  // Tworzymy posortowaną alfabetycznie listę Node
-  allNodes = Array.from(nodeSet).sort();
-
-  // Wstawiamy opcje do istniejącego selecta w HTML
-  const nodeSelect = document.getElementById("nodeFilter");
-  if(nodeSelect){
-    nodeSelect.innerHTML = `<option value="">Wszystkie strefy</option>` +
-      allNodes.map(n => `<option value="${n}">${n}</option>`).join('');
-  }
+  const sel=document.getElementById("nodeFilter");
+  sel.innerHTML=`<option value="">Wszystkie strefy</option>`+
+    [...nodeSet].sort().map(n=>`<option value="${n}">${n}</option>`).join('');
 }
 
-/* ===== AKTYWNE ===== */
+/* ===== LOAD ACTIVE ===== */
 async function loadActive(){
-  const res=await fetch(ACTIVE_URL);
-  const rows=parseCSV(await res.text()).slice(1);
+  const rows=parseCSV(await (await fetch(ACTIVE_URL)).text()).slice(1);
 
   activeEvents={};
   let count=0;
 
   rows.forEach(r=>{
-    if(!r[0]) return;
-    const id=r[0].trim();
+    const id=r[0]?.trim();
+    if(!id) return;
+
     if(!activeEvents[id]) activeEvents[id]=[];
     activeEvents[id].push({name:r[4],hardware:r[6]||"",date:r[3]});
     count++;
@@ -199,196 +192,75 @@ async function loadActive(){
   document.getElementById("alarmCounter").innerText=count;
 }
 
-/* ===== HISTORIA ===== */
+/* ===== LOAD HISTORY ===== */
 async function loadHistory(){
-  const res=await fetch(HISTORY_URL);
-  historyEvents=parseCSV(await res.text()).slice(1);
+  historyEvents=parseCSV(await (await fetch(HISTORY_URL)).text()).slice(1);
 }
 
-/* ===== RENDER MAPA ===== */
+/* ===== MARKER ICON ===== */
+function color(events){
+  if(events.some(e=>e.name.toLowerCase().includes("offline"))) return "#dc2626";
+  if(events.some(e=>e.name.toLowerCase().includes("papier"))) return "#f59e0b";
+  return "#3b82f6";
+}
+
+function icon(events){
+  return L.divIcon({
+    className:"",
+    html:`<div style="width:16px;height:16px;border-radius:50%;
+    background:${color(events)};border:3px solid white;
+    box-shadow:0 0 10px rgba(0,0,0,0.7)"></div>`
+  });
+}
+
+/* ===== RENDER MAPA + AUTO ZOOM ===== */
 function renderMarkers(){
 
-  const nodeFilter = document.getElementById("nodeFilter").value;
-
+  const node=document.getElementById("nodeFilter").value;
   markerLayer.clearLayers();
 
-  let boundsArray = []; // 🔥 NOWE – zbieramy współrzędne
+  let pts=[];
 
   Object.keys(activeEvents).forEach(id=>{
-    const p = allParkomaty[id];
+    const p=allParkomaty[id];
     if(!p) return;
-    if(nodeFilter && p.node !== nodeFilter) return;
+    if(node && p.node!==node) return;
 
-    let popup = `<b>Parkomat ${id}</b><br>${p.location}<br><br>`;
+    let popup=`<b>${id}</b><br>${p.location}<br><br>`;
 
     activeEvents[id].forEach(e=>{
-      popup += `• ${e.name} (${e.hardware})<br>
-                <small>${e.date}</small><br>`;
+      popup+=`• ${e.name}<br><small>${e.date}</small><br>`;
     });
 
-    popup += `<br>
-      <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}"
-         target="_blank"
-         style="background:#16a34a;color:white;padding:6px 10px;border-radius:6px;text-decoration:none;">
-         🧭 Nawiguj
-      </a>`;
-
-    L.marker([p.lat, p.lng])
+    L.marker([p.lat,p.lng],{icon:icon(activeEvents[id])})
       .bindPopup(popup)
       .addTo(markerLayer);
 
-    // 🔥 NOWE – zapisujemy punkt do centrowania
-    boundsArray.push([p.lat, p.lng]);
+    pts.push([p.lat,p.lng]);
   });
 
-  // 🔥 NOWE – logika auto-centrowania
-
-  // brak awarii
-  if(boundsArray.length === 0){
-    map.setView([52.2297,21.0122], 6);
+  if(pts.length===0){
+    map.setView([52.2297,21.0122],6);
     return;
   }
 
-  // jedna awaria
-  if(boundsArray.length === 1){
-    map.setView(boundsArray[0], 15);
+  if(pts.length===1){
+    map.setView(pts[0],15);
     return;
   }
 
-  // wiele awarii
-  const bounds = L.latLngBounds(boundsArray);
-
-  map.fitBounds(bounds, {
-    padding: [50, 50],
-    maxZoom: 16,
-    animate: true,
-    duration: 0.5
-  });
+  map.fitBounds(L.latLngBounds(pts),{padding:[50,50],maxZoom:16});
 }
 
-function populateActiveEventFilter(){
-
-  const set = new Set();
-
-  Object.values(activeEvents).forEach(arr=>{
-    arr.forEach(e=>{
-      if(e.name) set.add(e.name);
-    });
-  });
-
-  const select = document.getElementById("activeEventFilter");
-
-  select.innerHTML = `<option value="">Wszystkie awarie</option>` +
-    Array.from(set).sort().map(e=>`<option value="${e}">${e}</option>`).join('');
-}
-  
-/* ===== RENDER AWARIE ===== */
-function renderActiveList(){
-
-  const dateFrom = document.getElementById("activeDateFrom").value;
-  const dateTo = document.getElementById("activeDateTo").value;
-  const terminalFilter = document.getElementById("activeTerminalFilter").value.trim();
-  const eventFilter = document.getElementById("activeEventFilter").value;
-
-  const from = dateFrom ? new Date(dateFrom) : null;
-  const to = dateTo ? new Date(dateTo) : null;
-
-  let html = "";
-
-  Object.keys(activeEvents).forEach(id=>{
-    const p = allParkomaty[id];
-    if(!p) return;
-
-    const filteredEvents = activeEvents[id].filter(e=>{
-      const eventDate = new Date(e.date);
-
-      if(from && eventDate < from) return false;
-      if(to && eventDate > to) return false;
-      if(terminalFilter && !id.includes(terminalFilter)) return false;
-      if(eventFilter && e.name !== eventFilter) return false;
-
-      return true;
-    });
-
-    if(filteredEvents.length === 0) return;
-
-    html += `<div class="terminal-box"><b>Parkomat ${id}</b><br>${p.location}<br><br>`;
-
-    filteredEvents.forEach(e=>{
-      html += `• ${e.name} (${e.hardware})<br><small>${e.date}</small><br>`;
-    });
-
-    html += `<br>
-      <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}"
-         target="_blank"
-         style="background:#16a34a;color:white;padding:6px 10px;border-radius:6px;text-decoration:none;">
-         🧭 Nawiguj
-      </a></div>`;
-  });
-
-  document.getElementById("awarieList").innerHTML = html;
-}
-
-function populateEventFilter(){
-
-  const set = new Set();
-
-  historyEvents.forEach(r=>{
-    if(r[4]) set.add(r[4]);
-  });
-
-  const select=document.getElementById("historyEventFilter");
-
-  select.innerHTML=
-    `<option value="">Wszystkie awarie</option>` +
-    Array.from(set).sort().map(e =>
-      `<option value="${e}">${e}</option>`
-    ).join('');
-}
-      
-/* ===== RENDER HISTORIA ===== */
-function renderHistoryList(){
-
-  const dateFrom=document.getElementById("historyDateFrom").value;
-  const dateTo=document.getElementById("historyDateTo").value;
-  const terminalFilter=document.getElementById("historyTerminalFilter").value.trim();
-  const eventFilter=document.getElementById("historyEventFilter").value;
-
-  const from=dateFrom ? new Date(dateFrom) : null;
-  const to=dateTo ? new Date(dateTo) : null;
-
-  let html="";
-
-  historyEvents
-    .sort((a,b)=> new Date(b[3]) - new Date(a[3]))
-    .forEach(r=>{
-
-      if(!r[0]) return;
-
-      const eventDate=new Date(r[3]);
-
-      if(from && eventDate < from) return;
-      if(to && eventDate > to) return;
-
-      if(terminalFilter && !r[0].includes(terminalFilter)) return;
-
-      if(eventFilter && r[4] !== eventFilter) return;
-
-      html+=`<div class="terminal-box">
-        <b>Parkomat ${r[0]}</b><br>
-        ${r[4]} (${r[6]||""})<br>
-        Od: ${r[3]}<br>
-        Do: ${r[7]||""}
-      </div>`;
-    });
-
-  document.getElementById("historiaList").innerHTML=html;
+/* ===== UI ===== */
+function showSection(id){
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  if(id==="mapSection") setTimeout(()=>map.invalidateSize(),200);
 }
 
 function renderAll(){
   renderMarkers();
-  renderActiveList();
-  renderHistoryList();
 }
 
 /* ===== INIT ===== */
@@ -396,21 +268,17 @@ async function init(){
   await loadParkomaty();
   await loadActive();
   await loadHistory();
-
-  populateActiveEventFilter();
-  populateEventFilter();
-
   renderAll();
 }
 
 init();
 
+/* GPS */
+document.getElementById("locateBtn").onclick=()=>{
+  map.locate({setView:true,maxZoom:16});
+};
+
 </script>
 
 </body>
 </html>
-
-
-
-
-
