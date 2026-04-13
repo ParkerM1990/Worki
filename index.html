@@ -8,22 +8,71 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
 <style>
-body{margin:0;font-family:Arial;background:#0b1220;color:#e5e7eb;}
-header{height:60px;background:#020617;color:white;display:flex;align-items:center;justify-content:center;position:relative;}
-#alarmCounter{position:absolute;right:15px;background:#dc2626;padding:4px 10px;border-radius:20px;}
+body{
+  margin:0;
+  font-family:Arial;
+  background:#0b1220;
+  color:#e5e7eb;
+}
 
-.main{position:fixed;top:60px;bottom:60px;left:0;right:0;overflow:hidden;}
-.section{position:absolute;inset:0;display:none;overflow:auto;}
-.section.active{display:block;}
+header{
+  height:60px;
+  background:#020617;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  color:white;
+}
 
-#map{width:100%;height:100%;}
+#alarmCounter{
+  position:absolute;
+  right:15px;
+  background:#dc2626;
+  padding:4px 10px;
+  border-radius:20px;
+}
+
+.main{
+  position:fixed;
+  top:60px;
+  bottom:60px;
+  left:0;
+  right:0;
+  overflow:hidden;
+}
+
+.section{
+  position:absolute;
+  inset:0;
+  display:none;
+  overflow:auto;
+}
+
+.section.active{
+  display:block;
+}
+
+#map{
+  width:100%;
+  height:100%;
+}
 
 .bottom-nav{
-  position:fixed;bottom:0;height:60px;width:100%;
-  display:flex;background:#020617;border-top:1px solid #1f2937;
+  position:fixed;
+  bottom:0;
+  height:60px;
+  width:100%;
+  display:flex;
+  background:#020617;
+  border-top:1px solid #1f2937;
 }
+
 .bottom-nav button{
-  flex:1;border:none;background:none;color:#e5e7eb;
+  flex:1;
+  border:none;
+  background:none;
+  color:#e5e7eb;
   font-weight:600;
 }
 
@@ -31,7 +80,9 @@ header{height:60px;background:#020617;color:white;display:flex;align-items:cente
   padding:10px;
   background:#020617;
   border-bottom:1px solid #1f2937;
-  display:flex;gap:10px;flex-wrap:wrap;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
 }
 
 select,input{
@@ -113,9 +164,9 @@ Monitoring Parkomatów
 </div>
 
 <div class="bottom-nav">
-<button onclick="showSection('mapSection')">MAPA</button>
-<button onclick="showSection('awarieSection')">AWARIE</button>
-<button onclick="showSection('historiaSection')">HISTORIA</button>
+  <button onclick="showSection('mapSection')">MAPA</button>
+  <button onclick="showSection('awarieSection')">AWARIE</button>
+  <button onclick="showSection('historiaSection')">HISTORIA</button>
 </div>
 
 <button id="locateBtn">📍</button>
@@ -124,7 +175,7 @@ Monitoring Parkomatów
 
 <script>
 
-/* ===== SOURCES ===== */
+/* ===== SHEETS ===== */
 const PARKOMATY_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vReREVijVR33ZVud78Iv_oHBEkmDRkQxRxL97KN8gIbs9u5YPtVtvYsaQmHxrf7JWz_pQ_KdCaixonO/pub?output=csv";
 const ACTIVE_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTj9Z5qWrmqdo88LUJtOcJsUkaNZEhxfsXTucOKWI2hbwtUKdGwdvQn4JsR7Wj27TJwxW7H0jnODbfR/pub?gid=0&single=true&output=csv";
 const HISTORY_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTj9Z5qWrmqdo88LUJtOcJsUkaNZEhxfsXTucOKWI2hbwtUKdGwdvQn4JsR7Wj27TJwxW7H0jnODbfR/pub?gid=1220391858&single=true&output=csv";
@@ -143,32 +194,35 @@ let historyEvents=[];
 
 /* ===== CSV ===== */
 function parseCSV(t){
-  return t.replace(/^\uFEFF/,"").split("\n").filter(l=>l.trim())
+  return t.replace(/^\uFEFF/,"")
+    .split("\n")
+    .filter(l=>l.trim())
     .map(l=>l.split(",").map(v=>v.replace(/"/g,"")));
 }
 
 /* ===== LOAD ===== */
 async function loadParkomaty(){
   const rows=parseCSV(await (await fetch(PARKOMATY_URL)).text()).slice(1);
-  const set=new Set();
+  const nodes=new Set();
 
   rows.forEach(r=>{
     const id=r[0]?.trim();
-    const lat=parseFloat(r[3]);
     const lng=parseFloat(r[2]);
+    const lat=parseFloat(r[3]);
     const node=r[4];
 
-    if(!id||isNaN(lat)||isNaN(lng)) return;
+    if(!id || isNaN(lat) || isNaN(lng)) return;
 
     allParkomaty[id]={lat,lng,location:r[1],node};
-    set.add(node);
+    nodes.add(node);
   });
 
   document.getElementById("nodeFilter").innerHTML=
     `<option value="">Wszystkie strefy</option>`+
-    [...set].sort().map(n=>`<option>${n}</option>`).join('');
+    [...nodes].sort().map(n=>`<option>${n}</option>`).join('');
 }
 
+/* ===== ACTIVE ===== */
 async function loadActive(){
   const rows=parseCSV(await (await fetch(ACTIVE_URL)).text()).slice(1);
 
@@ -180,67 +234,22 @@ async function loadActive(){
     if(!id) return;
 
     if(!activeEvents[id]) activeEvents[id]=[];
-    activeEvents[id].push({name:r[4],hardware:r[6]||"",date:r[3]});
+
+    activeEvents[id].push({
+      name:r[4],
+      hardware:r[6]||"",
+      date:r[3]
+    });
+
     count++;
   });
 
   document.getElementById("alarmCounter").innerText=count;
 }
 
+/* ===== HISTORY ===== */
 async function loadHistory(){
   historyEvents=parseCSV(await (await fetch(HISTORY_URL)).text()).slice(1);
-}
-
-/* ===== MARKERS ===== */
-function color(ev){
-  if(ev.some(e=>e.name.includes("offline"))) return "#dc2626";
-  if(ev.some(e=>e.name.includes("papier"))) return "#f59e0b";
-  return "#3b82f6";
-}
-
-function icon(ev){
-  return L.divIcon({
-    className:"",
-    html:`<div style="width:16px;height:16px;border-radius:50%;
-    background:${color(ev)};border:3px solid white"></div>`
-  });
-}
-
-/* ===== MAP ===== */
-function renderMarkers(){
-  const node=document.getElementById("nodeFilter").value;
-  markerLayer.clearLayers();
-
-  let pts=[];
-
-  Object.keys(activeEvents).forEach(id=>{
-    const p=allParkomaty[id];
-    if(!p) return;
-    if(node && p.node!==node) return;
-
-    let popup=`<b>${id}</b><br>${p.location}<br><br>`;
-
-    activeEvents[id].forEach(e=>{
-      popup+=`• ${e.name}<br><small>${e.date}</small><br>`;
-    });
-
-    popup+=`
-      <br>
-      <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}"
-      target="_blank">🧭 Nawiguj</a>
-    `;
-
-    L.marker([p.lat,p.lng],{icon:icon(activeEvents[id])})
-      .bindPopup(popup)
-      .addTo(markerLayer);
-
-    pts.push([p.lat,p.lng]);
-  });
-
-  if(pts.length===0) return map.setView([52.2,21.0],6);
-  if(pts.length===1) return map.setView(pts[0],15);
-
-  map.fitBounds(L.latLngBounds(pts),{padding:[50,50],maxZoom:16});
 }
 
 /* ===== UI ===== */
@@ -250,29 +259,77 @@ function showSection(id){
   if(id==="mapSection") setTimeout(()=>map.invalidateSize(),200);
 }
 
-function renderAll(){
-  renderMarkers();
-  renderActiveList();
-  renderHistoryList();
+/* ===== MARKER ===== */
+function icon(){
+  return L.divIcon({
+    className:"",
+    html:`<div style="width:14px;height:14px;border-radius:50%;
+    background:#3b82f6;border:3px solid white"></div>`
+  });
 }
 
-/* ===== LISTY (NAPRAWIONE) ===== */
-function renderActiveList(){
-  let html="";
+/* ===== MAP (PURE RENDER) ===== */
+function renderMarkers(){
+
+  const node=document.getElementById("nodeFilter").value;
+  markerLayer.clearLayers();
+
+  let pts=[];
+
   Object.keys(activeEvents).forEach(id=>{
     const p=allParkomaty[id];
     if(!p) return;
 
-    html+=`<div class="terminal-box"><b>${id}</b><br>${p.location}</div>`;
+    if(node && p.node!==node) return;
+
+    let popup=`<b>Parkomat ${id}</b><br>${p.location}<br><br>`;
+
+    activeEvents[id].forEach(e=>{
+      popup+=`• ${e.name}<br><small>${e.date}</small><br>`;
+    });
+
+    popup+=`
+      <br>
+      <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}"
+         target="_blank"
+         style="display:inline-block;margin-top:8px;
+         background:#16a34a;color:white;padding:6px 10px;
+         border-radius:6px;text-decoration:none;">
+         🧭 Nawiguj
+      </a>
+    `;
+
+    L.marker([p.lat,p.lng],{icon:icon()})
+      .bindPopup(popup)
+      .addTo(markerLayer);
+
+    pts.push([p.lat,p.lng]);
   });
-  document.getElementById("awarieList").innerHTML=html;
+
+  if(pts.length===1) map.setView(pts[0],15);
+  else if(pts.length>1) map.fitBounds(L.latLngBounds(pts),{padding:[50,50],maxZoom:16});
+}
+
+/* ===== LISTY (1:1 z danych) ===== */
+function renderActiveList(){
+  document.getElementById("awarieList").innerHTML=
+    Object.keys(activeEvents).map(id=>
+      `<div class="terminal-box"><b>${id}</b></div>`
+    ).join("");
 }
 
 function renderHistoryList(){
   document.getElementById("historiaList").innerHTML=
-    historyEvents.slice(0,50).map(r=>
-      `<div class="terminal-box">${r[0]} - ${r[4]}</div>`
+    historyEvents.map(r=>
+      `<div class="terminal-box">${r.join(" | ")}</div>`
     ).join("");
+}
+
+/* ===== MASTER ===== */
+function renderAll(){
+  renderMarkers();
+  renderActiveList();
+  renderHistoryList();
 }
 
 /* ===== INIT ===== */
