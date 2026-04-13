@@ -198,7 +198,7 @@ function parseCSV(text){
   return rows;
 }
 
-/* ===== LOAD ===== */
+/* ===== LOAD PARKOMATY ===== */
 async function loadParkomaty(){
   const rows=parseCSV(await (await fetch(PARKOMATY_URL)).text()).slice(1);
 
@@ -221,7 +221,7 @@ async function loadParkomaty(){
     [...nodeSet].sort().map(n=>`<option>${n}</option>`).join('');
 }
 
-/* ===== ACTIVE ===== */
+/* ===== LOAD ACTIVE ===== */
 async function loadActive(){
   const rows=parseCSV(await (await fetch(ACTIVE_URL)).text()).slice(1);
 
@@ -246,7 +246,7 @@ async function loadActive(){
   document.getElementById("alarmCounter").innerText=count;
 }
 
-/* ===== HISTORY ===== */
+/* ===== LOAD HISTORY ===== */
 async function loadHistory(){
   historyEvents=parseCSV(await (await fetch(HISTORY_URL)).text()).slice(1);
 }
@@ -258,7 +258,7 @@ function showSection(id){
   if(id==="mapSection") setTimeout(()=>map.invalidateSize(),200);
 }
 
-/* ===== MAP + AUTO CENTROWANIE ===== */
+/* ===== MAP + AUTO CENTER ===== */
 function renderMarkers(){
 
   const node=document.getElementById("nodeFilter").value;
@@ -308,7 +308,37 @@ function renderMarkers(){
   }
 }
 
-/* ===== AWARIE (ORIGINAL LOGIKA) ===== */
+/* ===== FILTR AWARII (RESTORED) ===== */
+function populateActiveEventFilter(){
+
+  const set=new Set();
+
+  Object.values(activeEvents).forEach(arr=>{
+    arr.forEach(e=>{
+      if(e.name) set.add(e.name);
+    });
+  });
+
+  document.getElementById("activeEventFilter").innerHTML=
+    `<option value="">Wszystkie awarie</option>`+
+    [...set].sort().map(e=>`<option value="${e}">${e}</option>`).join('');
+}
+
+/* ===== FILTR HISTORII (RESTORED) ===== */
+function populateEventFilter(){
+
+  const set=new Set();
+
+  historyEvents.forEach(r=>{
+    if(r[4]) set.add(r[4]);
+  });
+
+  document.getElementById("historyEventFilter").innerHTML=
+    `<option value="">Wszystkie awarie</option>`+
+    [...set].sort().map(e=>`<option value="${e}">${e}</option>`).join('');
+}
+
+/* ===== AWARIE ===== */
 function renderActiveList(){
 
   const from=document.getElementById("activeDateFrom").value;
@@ -347,7 +377,7 @@ function renderActiveList(){
   document.getElementById("awarieList").innerHTML=html;
 }
 
-/* ===== HISTORY (ORIGINAL LOGIKA) ===== */
+/* ===== HISTORIA ===== */
 function renderHistoryList(){
 
   const from=document.getElementById("historyDateFrom").value;
@@ -393,6 +423,10 @@ async function init(){
   await loadParkomaty();
   await loadActive();
   await loadHistory();
+
+  populateActiveEventFilter();
+  populateEventFilter();
+
   renderAll();
 }
 
