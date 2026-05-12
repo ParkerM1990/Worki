@@ -16,15 +16,28 @@ body{
   color:#e5e7eb;
 }
 
+
 header{
   height:60px;
   background:#020617;
   color:white;
   display:flex;
   align-items:center;
-  justify-content:center;
+  justify-content:space-between; /* ✅ */
+  padding:0 10px;
   position:relative;
 }
+
+.header-left{
+  font-weight:600;
+}
+
+.header-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
 
 #alarmCounter{
   position:absolute;
@@ -187,10 +200,20 @@ select,input{
 
 <body>
 
+
 <header>
-Monitoring Parkomatów
-<div id="alarmCounter">0</div>
-</header>
+
+  <div class="header-left">
+    Monitoring Parkomatów
+  </div>
+
+  <div class="header-right">
+    <button class="filter-toggle" onclick="toggleFilters()">
+      ⚙️
+    </button>
+    <div id="alarmCounter">0</div>
+  </div>
+
 
 <div class="main">
 
