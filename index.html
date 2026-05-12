@@ -327,7 +327,7 @@ let markerLayer = L.layerGroup().addTo(map);
 let allParkomaty={};
 let activeEvents={};
 let historyEvents=[];
-
+const RED_CODES = ["16384","16385","16386","16900"];
 /* ===== CSV ===== */
 function parseCSV(text){
   const rows=[];
@@ -376,11 +376,14 @@ async function loadActive(){
 
     if(!activeEvents[id]) activeEvents[id]=[];
 
-    activeEvents[id].push({
-      name:r[5],
-      hardware:r[7]||"",
-      date:r[3]
-    });
+    
+activeEvents[id].push({
+  name:r[5],
+  code:r[4],   // ✅ DODANE (eventCode)
+  hardware:r[7]||"",
+  date:r[3]
+});
+
 
     count++;
   });
@@ -408,33 +411,62 @@ function renderMarkers(){
 
   let points=[];
 
-  Object.keys(activeEvents).forEach(id=>{
-    const p=allParkomaty[id];
-    if(!p) return;
+ 
+Object.keys(activeEvents).forEach(id=>{
+  const p=allParkomaty[id];
+  if(!p) return;
 
-    if(node && p.node!==node) return;
+  if(node && p.node!==node) return;
 
-    let popup=`<b>Parkomat ${id}</b><br>${p.location}<br><br>`;
+  let popup=`<b>Parkomat ${id}</b><br>${p.location}<br><br>`;
 
-    activeEvents[id].forEach(e=>{
-      popup+=`• ${e.name}<br><small>${e.date}</small><br>`;
-    });
-
-    popup+=`
-      <br>
-      <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}"
-         target="_blank"
-         style="background:#16a34a;color:white;padding:6px 10px;border-radius:6px;text-decoration:none;">
-         🧭 Nawiguj
-      </a>
-    `;
-
-    L.marker([p.lat,p.lng])
-      .bindPopup(popup)
-      .addTo(markerLayer);
-
-    points.push([p.lat,p.lng]);
+  activeEvents[id].forEach(e=>{
+    popup+=`• ${e.name}<br><small>${e.date}</small><br>`;
   });
+
+  popup+=`
+    <br>
+    <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}"
+       target="_blank"
+       style="background:#16a34a;color:white;padding:6px 10px;border-radius:6px;text-decoration:none;">
+       🧭 Nawiguj
+    </a>
+  `;
+
+  // ✅ 👉 DODAJ TO TU
+  const codes = activeEvents[id].map(e => (e.code ? String(e.code).trim() : ""));
+  const hasCritical = codes.some(code => RED_CODES.includes(code));
+
+  // ✅ marker
+  const icon = L.divIcon({
+    className: '',
+    html: `
+      <div style="
+        width:22px;
+        height:22px;
+        border-radius:50%;
+        background:${hasCritical ? '#dc2626' : '#16a34a'};
+        border:2px solid white;
+        box-shadow:0 0 8px rgba(0,0,0,0.6);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:12px;
+        color:white;
+        font-weight:bold;
+      ">
+        ${activeEvents[id].length}
+      </div>
+    `
+  });
+
+  L.marker([p.lat,p.lng], { icon })
+    .bindPopup(popup)
+    .addTo(markerLayer);
+
+  points.push([p.lat,p.lng]);
+});
+
 
   if(points.length===0){
     map.setView([52.2297,21.0122],6);
