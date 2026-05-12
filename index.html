@@ -69,23 +69,21 @@ header{
 }
 
 /* 🔘 przycisk */
+
 .filter-toggle{
-  position:absolute;
-  top:10px;
-  left:10px;
-  z-index:1001;
   background:#020617;
   color:white;
   border:1px solid #1f2937;
   border-radius:10px;
-  padding:8px 12px;
+  padding:8px 10px;
   font-size:14px;
 }
+
 
 /* 📦 panel */
 .map-filter-panel{
   position:absolute;
-  top:60px;
+  top:10px;
   left:10px;
   right:10px;
   background:#020617;
@@ -221,11 +219,6 @@ select,input{
 <div id="mapSection" class="section active">
   
 <div class="map-filter-wrapper">
-
-  <button class="filter-toggle" onclick="toggleFilters()">
-    ⚙️ Filtry
-  </button>
-
   <div id="mapFilterPanel" class="map-filter-panel">
 
     <div class="filter-item">
