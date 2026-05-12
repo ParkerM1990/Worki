@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -77,21 +78,45 @@ header{
   font-weight:600;
 }
 
-.filter-bar{
+/* ✅ NOWY MOBILNY PANEL FILTRÓW */
+.filter-bar.mobile{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:8px;
   padding:10px;
   background:#020617;
   border-bottom:1px solid #1f2937;
+  position:sticky;
+  top:0;
+  z-index:10;
+}
+
+.filter-item{
   display:flex;
-  gap:10px;
-  flex-wrap:wrap;
+  align-items:center;
+  background:#020617;
+  border:1px solid #1f2937;
+  border-radius:10px;
+  padding:6px 8px;
+}
+
+.filter-item span{
+  font-size:14px;
+  margin-right:6px;
+}
+
+.filter-item input,
+.filter-item select{
+  flex:1;
+  background:transparent;
+  border:none;
+  color:white;
+  font-size:14px;
+  outline:none;
 }
 
 select,input{
-  padding:6px;
-  border-radius:6px;
-  border:1px solid #374151;
-  background:#0b1220;
-  color:white;
+  font-size:14px;
 }
 
 .terminal-box{
@@ -120,39 +145,74 @@ Monitoring Parkomatów
 
 <!-- MAPA -->
 <div id="mapSection" class="section active">
-  <div class="filter-bar">
-    <select id="nodeFilter" onchange="renderAll()">
-      <option value="">Wszystkie strefy</option>
-    </select>
+  <div class="filter-bar mobile">
+    <div class="filter-item">
+      <span>📍</span>
+      <select id="nodeFilter" onchange="renderAll()">
+        <option value="">Strefa</option>
+      </select>
+    </div>
   </div>
   <div id="map"></div>
 </div>
 
 <!-- AWARIE -->
 <div id="awarieSection" class="section">
-  <div class="filter-bar">
-    <input type="date" id="activeDateFrom" onchange="renderActiveList()">
-    <input type="date" id="activeDateTo" onchange="renderActiveList()">
-    <input type="text" id="activeTerminalFilter" oninput="renderActiveList()">
 
-    <select id="activeEventFilter" onchange="renderActiveList()">
-      <option value="">Wszystkie awarie</option>
-    </select>
+  <div class="filter-bar mobile">
+
+    <div class="filter-item">
+      <span>📅</span>
+      <input type="date" id="activeDateFrom" onchange="renderActiveList()">
+    </div>
+
+    <div class="filter-item">
+      <span>➡️</span>
+      <input type="date" id="activeDateTo" onchange="renderActiveList()">
+    </div>
+
+    <div class="filter-item">
+      <span>🔎</span>
+      <input type="text" id="activeTerminalFilter" placeholder="Nr parkomatu" oninput="renderActiveList()">
+    </div>
+
+    <div class="filter-item">
+      <span>⚠️</span>
+      <select id="activeEventFilter" onchange="renderActiveList()"></select>
+    </div>
+
   </div>
+
   <div id="awarieList"></div>
 </div>
 
 <!-- HISTORIA -->
 <div id="historiaSection" class="section">
-  <div class="filter-bar">
-    <input type="date" id="historyDateFrom" onchange="renderHistoryList()">
-    <input type="date" id="historyDateTo" onchange="renderHistoryList()">
-    <input type="text" id="historyTerminalFilter" oninput="renderHistoryList()">
 
-    <select id="historyEventFilter" onchange="renderHistoryList()">
-      <option value="">Wszystkie awarie</option>
-    </select>
+  <div class="filter-bar mobile">
+
+    <div class="filter-item">
+      <span>📅</span>
+      <input type="date" id="historyDateFrom" onchange="renderHistoryList()">
+    </div>
+
+    <div class="filter-item">
+      <span>➡️</span>
+      <input type="date" id="historyDateTo" onchange="renderHistoryList()">
+    </div>
+
+    <div class="filter-item">
+      <span>🔎</span>
+      <input type="text" id="historyTerminalFilter" placeholder="Nr parkomatu" oninput="renderHistoryList()">
+    </div>
+
+    <div class="filter-item">
+      <span>📜</span>
+      <select id="historyEventFilter" onchange="renderHistoryList()"></select>
+    </div>
+
   </div>
+
   <div id="historiaList"></div>
 </div>
 
@@ -166,6 +226,7 @@ Monitoring Parkomatów
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
+<!-- ✅ JS zostaje praktycznie bez zmian -->
 <script>
 
 /* ===== SHEETS ===== */
@@ -175,9 +236,7 @@ const HISTORY_URL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTj9Z5qWrmqdo
 
 /* ===== MAPA ===== */
 let map = L.map('map').setView([52.2297,21.0122],12);
-
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-
 let markerLayer = L.layerGroup().addTo(map);
 
 /* ===== DATA ===== */
@@ -189,14 +248,13 @@ let historyEvents=[];
 function parseCSV(text){
   const rows=[];
   const lines=text.replace(/^\uFEFF/,"").split(/\r?\n/);
-
   for(let line of lines){
     if(!line.trim()) continue;
     rows.push(line.split(",").map(v=>v.replace(/^"|"$/g,"")));
   }
-
   return rows;
 }
+
 
 /* ===== LOAD PARKOMATY ===== */
 async function loadParkomaty(){
